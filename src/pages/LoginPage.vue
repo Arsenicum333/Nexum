@@ -41,14 +41,18 @@
             no-caps
             class="full-width"
           />
-          <q-btn
-            flat
-            no-caps
-            color="primary"
-            label="Don't have an account? Sign up"
-            to="/auth/register"
-            class="q-mt-sm"
-          />
+          <div class="q-mt-sm row items-center justify-center q-gutter-xs">
+            <span>Don't have an account?</span>
+
+            <q-btn
+              flat
+              dense
+              no-caps
+              color="primary"
+              label="Sign up"
+              to="/auth/register"
+            />
+          </div>
         </q-card-actions>
       </q-form>
     </q-card>

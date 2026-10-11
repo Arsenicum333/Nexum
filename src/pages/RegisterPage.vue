@@ -81,14 +81,18 @@
             no-caps
             class="full-width"
           />
-          <q-btn
-            flat
-            no-caps
-            color="primary"
-            label="Already have an account? Sign in"
-            to="/auth/login"
-            class="q-mt-sm"
-          />
+          <div class="q-mt-sm row items-center justify-center q-gutter-xs">
+            <span>Already have an account?</span>
+
+            <q-btn
+              flat
+              dense
+              no-caps
+              color="primary"
+              label="Sign in"
+              to="/auth/login"
+            />
+          </div>
         </q-card-actions>
       </q-form>
     </q-card>
