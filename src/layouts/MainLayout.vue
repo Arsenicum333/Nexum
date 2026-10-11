@@ -34,25 +34,53 @@
     </q-header>
 
     <q-drawer v-model="leftDrawerOpen" show-if-above bordered :width="80">
-    <div class="column full-height">
-      <q-list>
-          <q-item clickable v-ripple to="/chat/general" class="rounded-borders q-mb-xs flex flex-center q-px-none">
-            <q-avatar color="primary" text-color="white" square class="rounded-borders">
+      <div class="column full-height">
+        <q-list>
+          <q-item
+            clickable
+            v-ripple
+            to="/chat/general"
+            class="rounded-borders q-mb-xs flex flex-center q-px-none"
+          >
+            <q-avatar
+              color="primary"
+              text-color="white"
+              square
+              class="rounded-borders"
+            >
               <q-icon name="chat" />
             </q-avatar>
 
-            <q-tooltip anchor="center right" self="center left" :offset="[10, 0]">
+            <q-tooltip
+              anchor="center right"
+              self="center left"
+              :offset="[10, 0]"
+            >
               <div class="text-subtitle1 text-weight-bold">General</div>
               <div class="text-caption">General chat</div>
             </q-tooltip>
           </q-item>
 
-          <q-item clickable v-ripple to="/chat/random" class="rounded-borders q-mb-xs flex flex-center q-px-none">
-            <q-avatar color="primary" text-color="white" square class="rounded-borders">
+          <q-item
+            clickable
+            v-ripple
+            to="/chat/random"
+            class="rounded-borders q-mb-xs flex flex-center q-px-none"
+          >
+            <q-avatar
+              color="primary"
+              text-color="white"
+              square
+              class="rounded-borders"
+            >
               <q-icon name="shuffle" />
             </q-avatar>
 
-            <q-tooltip anchor="center right" self="center left" :offset="[10, 0]">
+            <q-tooltip
+              anchor="center right"
+              self="center left"
+              :offset="[10, 0]"
+            >
               <div class="text-subtitle1 text-weight-bold">Random</div>
               <div class="text-caption">Random chat</div>
             </q-tooltip>
@@ -63,12 +91,26 @@
 
         <q-separator />
         <q-list>
-          <q-item clickable v-ripple to="/account" class="rounded-borders q-mb-xs flex flex-center q-px-none">
-            <q-avatar color="primary" text-color="white" square class="rounded-borders">
+          <q-item
+            clickable
+            v-ripple
+            to="/auth/login"
+            class="rounded-borders q-mb-xs flex flex-center q-px-none"
+          >
+            <q-avatar
+              color="primary"
+              text-color="white"
+              square
+              class="rounded-borders"
+            >
               <q-icon name="person" />
             </q-avatar>
 
-            <q-tooltip anchor="center right" self="center left" :offset="[10, 0]">
+            <q-tooltip
+              anchor="center right"
+              self="center left"
+              :offset="[10, 0]"
+            >
               <div class="text-subtitle1 text-weight-bold">Account</div>
               <div class="text-caption">User account</div>
             </q-tooltip>
