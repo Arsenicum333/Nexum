@@ -90,31 +90,9 @@
         <q-space />
 
         <q-separator />
+        <q-separator />
         <q-list>
-          <q-item
-            clickable
-            v-ripple
-            to="/auth/login"
-            class="rounded-borders q-mb-xs flex flex-center q-px-none"
-          >
-            <q-avatar
-              color="primary"
-              text-color="white"
-              square
-              class="rounded-borders"
-            >
-              <q-icon name="person" />
-            </q-avatar>
-
-            <q-tooltip
-              anchor="center right"
-              self="center left"
-              :offset="[10, 0]"
-            >
-              <div class="text-subtitle1 text-weight-bold">Account</div>
-              <div class="text-caption">User account</div>
-            </q-tooltip>
-          </q-item>
+          <UserMenu />
         </q-list>
       </div>
     </q-drawer>
@@ -127,7 +105,7 @@
 
 <script setup>
 import { ref } from 'vue'
-
+import UserMenu from '@/pages/UserMenu.vue'
 const leftDrawerOpen = ref(false)
 
 function toggleLeftDrawer() {
