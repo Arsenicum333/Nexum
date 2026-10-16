@@ -1,0 +1,83 @@
+@startuml logical-model
+title Nexum - Logical Data Model
+
+hide methods
+
+entity User {
+  id
+  first_name
+  last_name
+  display_name
+  username
+  email
+  password_hash
+  status
+  created_at
+  updated_at
+}
+
+entity NotificationSettings {
+  notification_scope
+  browser_notifications
+  updated_at
+}
+
+entity Channel {
+  id
+  name
+  channel_type
+  created_at
+  last_activity_at
+  deleted_at
+}
+
+entity Message {
+  id
+  content
+  created_at
+  edited_at
+  deleted_at
+}
+
+entity Invitation {
+  id
+  status
+  created_at
+  responded_at
+}
+
+entity KickVote {
+  id
+  created_at
+}
+
+entity ChannelBan {
+  id
+  reason
+  created_at
+  revoked_at
+}
+
+User "1" -- "0..1" NotificationSettings : has
+
+User "0..*" -- "0..*" Channel : belongs to
+User "1" -- "0..*" Channel : owns
+
+User "1" -- "0..*" Message : sends
+Channel "1" -- "0..*" Message : contains
+
+Message "0..*" -- "0..*" User : mentions
+
+User "1" -- "0..*" Invitation : sends
+User "1" -- "0..*" Invitation : receives
+Channel "1" -- "0..*" Invitation : has
+
+User "1" -- "0..*" KickVote : casts
+User "1" -- "0..*" KickVote : is target of
+Channel "1" -- "0..*" KickVote : records
+
+User "1" -- "0..*" ChannelBan : is banned
+Channel "1" -- "0..*" ChannelBan : contains
+User "1" -- "0..*" ChannelBan : creates
+
+@enduml
