@@ -15,6 +15,7 @@
       </q-avatar>
       <span class="status-dot" :class="`bg-${currentStatus.color}`" />
     </div>
+    <q-tooltip>Account</q-tooltip>
 
     <q-menu anchor="bottom right" self="bottom left" :offset="[10, 0]">
       <q-card flat style="width: 280px">

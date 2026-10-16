@@ -1,9 +1,7 @@
 <template>
   <q-page class="flex row no-wrap fit">
     <div class="channels-sidebar bg-grey-2 column">
-      <div
-        class="q-pa-md text-weight-bold text-subtitle1 row items-center justify-between border-bottom"
-      >
+      <div class="q-pa-md text-weight-bold text-subtitle1 row items-center justify-between border-bottom">
         <span class="ellipsis">Some Workspace</span>
         <q-btn flat round dense icon="expand_more" size="sm" />
       </div>
@@ -11,9 +9,7 @@
       <q-scroll-area class="col">
         <q-list padding dense class="text-grey-8">
           <div class="row items-center justify-between q-px-sm q-pb-xs">
-            <span
-              class="text-uppercase text-weight-bolder text-caption text-grey-7"
-            >
+            <span class="text-uppercase text-weight-bolder text-caption text-grey-7">
               Text Channels
             </span>
             <q-btn
@@ -54,18 +50,16 @@
     </div>
 
     <div class="col column bg-white">
-      <div
-        class="q-px-md q-py-sm border-bottom row items-center justify-between"
-      >
+      <div class="q-px-md q-py-sm border-bottom row items-center justify-between">
         <div class="row items-center">
           <q-icon
             :name="currentChannel?.private ? 'lock' : 'tag'"
             size="sm"
             class="q-mr-xs text-grey-7"
           />
-          <span class="text-weight-bold text-subtitle1">{{
-            currentChannelName
-          }}</span>
+          <span class="text-weight-bold text-subtitle1">
+            {{currentChannelName}}
+          </span>
         </div>
         <div>
           <NotificationsMenu />
@@ -128,27 +122,6 @@
           </div>
         </div>
       </q-scroll-area>
-
-      <div class="q-pa-md border-top">
-        <q-input
-          v-model="newMessage"
-          dense
-          outlined
-          rounded
-          :placeholder="`Write in #${currentChannelName}...`"
-          @keyup.enter="sendMessage"
-        >
-          <template v-slot:append>
-            <q-btn
-              round
-              flat
-              icon="send"
-              color="primary"
-              @click="sendMessage"
-            />
-          </template>
-        </q-input>
-      </div>
     </div>
 
     <q-dialog v-model="createChannelDialog">
@@ -189,9 +162,9 @@
         <q-card-section class="row items-center justify-between">
           <div>
             <div class="text-h6">Channel members</div>
-            <div class="text-caption text-grey-6"
-              >{{ members.length }} members in #{{ currentChannelName }}</div
-            >
+            <div class="text-caption text-grey-6">
+              {{ members.length }} members in #{{ currentChannelName }}
+            </div>
           </div>
           <q-btn v-close-popup flat round dense icon="close" />
         </q-card-section>
@@ -215,9 +188,9 @@
                 color="primary"
                 label="owner"
               />
-              <span v-else class="text-caption text-grey-6">{{
-                member.status
-              }}</span>
+              <span v-else class="text-caption text-grey-6">
+                {{member.status}}
+              </span>
             </q-item-section>
           </q-item>
         </q-list>
@@ -227,7 +200,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { userStore } from '@/store/userStore'
 import NotificationsMenu from '@/pages/NotificationsMenu.vue'
 
@@ -336,6 +309,11 @@ function sendMessage() {
   newMessage.value = ''
 }
 
+function handleCommandMessage(event) {
+  newMessage.value = event.detail
+  sendMessage()
+}
+
 function openCreateChannelDialog() {
   newChannelName.value = ''
   newChannelType.value = 'public'
@@ -379,6 +357,14 @@ function removeCurrentChannel() {
   delete channelMessages.value[activeChannel.value]
   activeChannel.value = nextChannel.id
 }
+
+onMounted(() => {
+  window.addEventListener('nexum:send-message', handleCommandMessage)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('nexum:send-message', handleCommandMessage)
+})
 </script>
 
 <style scoped>
