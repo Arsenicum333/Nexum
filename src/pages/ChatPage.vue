@@ -68,7 +68,7 @@
           }}</span>
         </div>
         <div>
-          <q-btn flat round dense icon="notifications" color="grey-7" />
+          <NotificationsMenu />
           <q-btn
             flat
             round
@@ -229,6 +229,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { userStore } from '@/store/userStore'
+import NotificationsMenu from '@/pages/NotificationsMenu.vue'
 
 const activeChannel = ref('gen')
 const newMessage = ref('')
