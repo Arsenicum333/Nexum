@@ -26,14 +26,14 @@
           </div>
 
           <q-item
-            v-for="channel in textChannels"
+            v-for="channel in chatStore.textChannels"
             :key="channel.id"
             clickable
             v-ripple
-            :active="activeChannel === channel.id"
+            :active="chatStore.activeChannel === channel.id"
             active-class="bg-grey-4 text-primary text-weight-bold"
             class="rounded-borders q-mx-xs q-mb-xs"
-            @click="activeChannel = channel.id"
+            @click="selectChannel(channel)"
           >
             <q-item-section avatar class="min-width-auto q-pr-sm">
               <q-icon :name="channel.private ? 'lock' : 'tag'" size="xs" />
@@ -200,57 +200,18 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { userStore } from '@/store/userStore'
-import NotificationsMenu from '@/pages/NotificationsMenu.vue'
+import { chatStore } from '@/store/chatStore'
+import NotificationsMenu from '@/components/NotificationsMenu.vue'
 
-const activeChannel = ref('gen')
-const newMessage = ref('')
+const route = useRoute()
+const router = useRouter()
 const createChannelDialog = ref(false)
 const membersDialog = ref(false)
 const newChannelName = ref('')
 const newChannelType = ref('public')
-
-const textChannels = ref([
-  { id: 'gen', name: 'general', private: false, unread: 0, owner: 'me' },
-  { id: 'ann', name: 'announcements', private: false, unread: 2, owner: 'me' },
-  { id: 'dev', name: 'developers', private: true, unread: 0, owner: 'me' },
-  { id: 'random', name: 'random', private: false, unread: 0, owner: 'me' }
-])
-
-const channelMessages = ref({
-  gen: [
-    {
-      id: 1,
-      author: 'Alex',
-      text: 'Welcome to Nexum General Chat!',
-      time: '12:30'
-    },
-    {
-      id: 2,
-      author: 'Mariya',
-      text: 'Hello everyone! How is the development going?',
-      time: '12:32'
-    }
-  ],
-  ann: [
-    {
-      id: 3,
-      author: 'Alex',
-      text: 'The first prototype review is on Friday.',
-      time: '09:15'
-    }
-  ],
-  dev: [
-    {
-      id: 4,
-      author: 'Mariya',
-      text: 'Private channel for the frontend team.',
-      time: '11:05'
-    }
-  ],
-  random: []
-})
 
 const channelTypeOptions = [
   { label: 'Public channel - anyone can join', value: 'public' },
@@ -258,7 +219,9 @@ const channelTypeOptions = [
 ]
 
 const currentChannel = computed(() => {
-  return textChannels.value.find(channel => channel.id === activeChannel.value)
+  return chatStore.textChannels.find(
+    channel => channel.id === chatStore.activeChannel
+  )
 })
 
 const currentChannelName = computed(() => {
@@ -266,7 +229,25 @@ const currentChannelName = computed(() => {
 })
 
 const currentMessages = computed(
-  () => channelMessages.value[activeChannel.value] || []
+  () => chatStore.channelMessages[chatStore.activeChannel] || []
+)
+
+function syncChannelFromRoute(channelName) {
+  const channel = chatStore.textChannels.find(
+    item => item.name === channelName
+  )
+  if (channel) chatStore.activeChannel = channel.id
+}
+
+function selectChannel(channel) {
+  chatStore.activeChannel = channel.id
+  router.push(`/chat/${channel.name}`)
+}
+
+syncChannelFromRoute(route.params.channelName)
+watch(
+  () => route.params.channelName,
+  channelName => syncChannelFromRoute(channelName)
 )
 
 const members = computed(() => [
@@ -289,29 +270,10 @@ function channelNameRule(value) {
   if (!normalizedName) return 'Enter a channel name'
   if (!/^[a-z0-9-]+$/.test(normalizedName))
     return 'Use lowercase letters, numbers or hyphens'
-  if (textChannels.value.some(channel => channel.name === normalizedName)) {
+  if (chatStore.textChannels.some(channel => channel.name === normalizedName)) {
     return 'This channel already exists'
   }
   return true
-}
-
-function sendMessage() {
-  if (!newMessage.value.trim()) return
-  currentMessages.value.push({
-    id: Date.now(),
-    author: 'me',
-    text: newMessage.value,
-    time: new Date().toLocaleTimeString([], {
-      hour: '2-digit',
-      minute: '2-digit'
-    })
-  })
-  newMessage.value = ''
-}
-
-function handleCommandMessage(event) {
-  newMessage.value = event.detail
-  sendMessage()
 }
 
 function openCreateChannelDialog() {
@@ -324,16 +286,7 @@ function createChannel() {
   const name = newChannelName.value.trim().toLowerCase()
   if (channelNameRule(name) !== true) return
 
-  const id = `${name}-${Date.now()}`
-  textChannels.value.push({
-    id,
-    name,
-    private: newChannelType.value === 'private',
-    unread: 0,
-    owner: 'me'
-  })
-  channelMessages.value[id] = []
-  activeChannel.value = id
+  chatStore.createChannel(name, newChannelType.value === 'private')
   createChannelDialog.value = false
 }
 
@@ -346,25 +299,8 @@ function deleteChannel() {
 }
 
 function removeCurrentChannel() {
-  const currentIndex = textChannels.value.findIndex(
-    channel => channel.id === activeChannel.value
-  )
-  if (currentIndex === -1 || textChannels.value.length === 1) return
-
-  const nextChannel =
-    textChannels.value[currentIndex === 0 ? 1 : currentIndex - 1]
-  textChannels.value.splice(currentIndex, 1)
-  delete channelMessages.value[activeChannel.value]
-  activeChannel.value = nextChannel.id
+  chatStore.removeActiveChannel()
 }
-
-onMounted(() => {
-  window.addEventListener('nexum:send-message', handleCommandMessage)
-})
-
-onBeforeUnmount(() => {
-  window.removeEventListener('nexum:send-message', handleCommandMessage)
-})
 </script>
 
 <style scoped>

@@ -36,7 +36,8 @@
 import { ref } from 'vue'
 import { useQuasar } from 'quasar'
 import { useRoute, useRouter } from 'vue-router'
-import UserMenu from '@/pages/UserMenu.vue'
+import UserMenu from '@/components/UserMenu.vue'
+import { chatStore } from '@/store/chatStore'
 
 const $q = useQuasar()
 const route = useRoute()
@@ -51,9 +52,7 @@ function submitCommand() {
   if (value.startsWith('/')) {
     runCommand(value)
   } else if (route.path.startsWith('/chat/')) {
-    window.dispatchEvent(
-      new CustomEvent('nexum:send-message', { detail: value })
-    )
+    chatStore.addMessage(value)
   } else {
     $q.notify({
       type: 'info',
@@ -119,5 +118,4 @@ function runCommand(value) {
   width: 79px;
   flex: 0 0 79px;
 }
-
 </style>
