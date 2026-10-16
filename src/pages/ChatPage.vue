@@ -1,7 +1,9 @@
 <template>
   <q-page class="flex row no-wrap fit">
     <div class="channels-sidebar bg-grey-2 column">
-      <div class="q-pa-md text-weight-bold text-subtitle1 row items-center justify-between border-bottom">
+      <div
+        class="q-pa-md text-weight-bold text-subtitle1 row items-center justify-between border-bottom"
+      >
         <span class="ellipsis">Some Workspace</span>
         <q-btn flat round dense icon="expand_more" size="sm" />
       </div>
@@ -9,8 +11,10 @@
       <q-scroll-area class="col">
         <q-list padding dense class="text-grey-8">
           <div class="row items-center justify-between q-px-sm q-pb-xs">
-            <span class="text-uppercase text-weight-bolder text-caption text-grey-7">
-                Text Channels
+            <span
+              class="text-uppercase text-weight-bolder text-caption text-grey-7"
+            >
+              Text Channels
             </span>
             <q-btn
               flat
@@ -50,14 +54,29 @@
     </div>
 
     <div class="col column bg-white">
-      <div class="q-px-md q-py-sm border-bottom row items-center justify-between">
+      <div
+        class="q-px-md q-py-sm border-bottom row items-center justify-between"
+      >
         <div class="row items-center">
-          <q-icon :name="currentChannel?.private ? 'lock' : 'tag'" size="sm" class="q-mr-xs text-grey-7" />
-          <span class="text-weight-bold text-subtitle1">{{ currentChannelName }}</span>
+          <q-icon
+            :name="currentChannel?.private ? 'lock' : 'tag'"
+            size="sm"
+            class="q-mr-xs text-grey-7"
+          />
+          <span class="text-weight-bold text-subtitle1">{{
+            currentChannelName
+          }}</span>
         </div>
         <div>
           <q-btn flat round dense icon="notifications" color="grey-7" />
-          <q-btn flat round dense icon="people" color="grey-7" @click="membersDialog = true">
+          <q-btn
+            flat
+            round
+            dense
+            icon="people"
+            color="grey-7"
+            @click="membersDialog = true"
+          >
             <q-tooltip>View members</q-tooltip>
           </q-btn>
           <q-btn flat round dense icon="more_vert" color="grey-7">
@@ -65,18 +84,24 @@
             <q-menu anchor="bottom right" self="top right">
               <q-list dense style="min-width: 180px">
                 <q-item clickable v-close-popup @click="leaveChannel">
-                  <q-item-section avatar><q-icon name="logout" /></q-item-section>
+                  <q-item-section avatar
+                    ><q-icon name="logout"
+                  /></q-item-section>
                   <q-item-section>Leave channel</q-item-section>
                 </q-item>
                 <q-separator />
                 <q-item
                   clickable
                   v-close-popup
-                  :disable="currentChannel?.owner !== 'You'"
+                  :disable="currentChannel?.owner !== 'me'"
                   @click="deleteChannel"
                 >
-                  <q-item-section avatar><q-icon name="delete" color="negative" /></q-item-section>
-                  <q-item-section class="text-negative">Delete channel</q-item-section>
+                  <q-item-section avatar
+                    ><q-icon name="delete" color="negative"
+                  /></q-item-section>
+                  <q-item-section class="text-negative"
+                    >Delete channel</q-item-section
+                  >
                 </q-item>
               </q-list>
             </q-menu>
@@ -87,10 +112,15 @@
       <q-scroll-area class="col q-pa-md">
         <div v-for="msg in currentMessages" :key="msg.id" class="q-mb-md">
           <div class="row items-center q-mb-xs">
-            <q-avatar size="28px" color="amber-8" text-color="white" class="q-mr-sm">
-              {{ msg.author[0] }}
+            <q-avatar
+              size="28px"
+              color="amber-8"
+              text-color="white"
+              class="q-mr-sm"
+            >
+              {{ authorName(msg)[0] }}
             </q-avatar>
-            <span class="text-weight-bold q-mr-sm">{{ msg.author }}</span>
+            <span class="text-weight-bold q-mr-sm">{{ authorName(msg) }}</span>
             <span class="text-caption text-grey-6">{{ msg.time }}</span>
           </div>
           <div class="q-pl-xl text-body2 text-grey-9">
@@ -109,7 +139,13 @@
           @keyup.enter="sendMessage"
         >
           <template v-slot:append>
-            <q-btn round flat icon="send" color="primary" @click="sendMessage" />
+            <q-btn
+              round
+              flat
+              icon="send"
+              color="primary"
+              @click="sendMessage"
+            />
           </template>
         </q-input>
       </div>
@@ -153,24 +189,35 @@
         <q-card-section class="row items-center justify-between">
           <div>
             <div class="text-h6">Channel members</div>
-            <div class="text-caption text-grey-6">{{ members.length }} members in #{{ currentChannelName }}</div>
+            <div class="text-caption text-grey-6"
+              >{{ members.length }} members in #{{ currentChannelName }}</div
+            >
           </div>
           <q-btn v-close-popup flat round dense icon="close" />
         </q-card-section>
         <q-list separator>
-          <q-item v-for="member in members" :key="member.nickname">
+          <q-item v-for="member in members" :key="member.id">
             <q-item-section avatar>
-              <q-avatar :color="member.status === 'online' ? 'positive' : 'grey-6'" text-color="white">
-                {{ member.name[0] }}
+              <q-avatar
+                :color="member.status === 'online' ? 'positive' : 'grey-6'"
+                text-color="white"
+              >
+                {{ member.name[0]?.toUpperCase() }}
               </q-avatar>
             </q-item-section>
             <q-item-section>
               <q-item-label>{{ member.name }}</q-item-label>
-              <q-item-label caption>@{{ member.nickname }}</q-item-label>
+              <q-item-label caption>@{{ member.username }}</q-item-label>
             </q-item-section>
             <q-item-section side>
-              <q-badge v-if="member.nickname === currentChannel?.owner" color="primary" label="owner" />
-              <span v-else class="text-caption text-grey-6">{{ member.status }}</span>
+              <q-badge
+                v-if="member.id === currentChannel?.owner"
+                color="primary"
+                label="owner"
+              />
+              <span v-else class="text-caption text-grey-6">{{
+                member.status
+              }}</span>
             </q-item-section>
           </q-item>
         </q-list>
@@ -181,6 +228,7 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import { userStore } from '@/store/userStore'
 
 const activeChannel = ref('gen')
 const newMessage = ref('')
@@ -190,22 +238,42 @@ const newChannelName = ref('')
 const newChannelType = ref('public')
 
 const textChannels = ref([
-  { id: 'gen', name: 'general', private: false, unread: 0, owner: 'You' },
-  { id: 'ann', name: 'announcements', private: false, unread: 2, owner: 'You' },
-  { id: 'dev', name: 'developers', private: true, unread: 0, owner: 'You' },
-  { id: 'random', name: 'random', private: false, unread: 0, owner: 'You' }
+  { id: 'gen', name: 'general', private: false, unread: 0, owner: 'me' },
+  { id: 'ann', name: 'announcements', private: false, unread: 2, owner: 'me' },
+  { id: 'dev', name: 'developers', private: true, unread: 0, owner: 'me' },
+  { id: 'random', name: 'random', private: false, unread: 0, owner: 'me' }
 ])
 
 const channelMessages = ref({
   gen: [
-    { id: 1, author: 'Alex', text: 'Welcome to Nexum General Chat!', time: '12:30' },
-    { id: 2, author: 'Mariya', text: 'Hello everyone! How is the development going?', time: '12:32' }
+    {
+      id: 1,
+      author: 'Alex',
+      text: 'Welcome to Nexum General Chat!',
+      time: '12:30'
+    },
+    {
+      id: 2,
+      author: 'Mariya',
+      text: 'Hello everyone! How is the development going?',
+      time: '12:32'
+    }
   ],
   ann: [
-    { id: 3, author: 'Alex', text: 'The first prototype review is on Friday.', time: '09:15' }
+    {
+      id: 3,
+      author: 'Alex',
+      text: 'The first prototype review is on Friday.',
+      time: '09:15'
+    }
   ],
   dev: [
-    { id: 4, author: 'Mariya', text: 'Private channel for the frontend team.', time: '11:05' }
+    {
+      id: 4,
+      author: 'Mariya',
+      text: 'Private channel for the frontend team.',
+      time: '11:05'
+    }
   ],
   random: []
 })
@@ -223,18 +291,30 @@ const currentChannelName = computed(() => {
   return currentChannel.value?.name || 'general'
 })
 
-const currentMessages = computed(() => channelMessages.value[activeChannel.value] || [])
+const currentMessages = computed(
+  () => channelMessages.value[activeChannel.value] || []
+)
 
 const members = computed(() => [
-  { name: 'You', nickname: 'you', status: 'online' },
-  { name: 'Alex', nickname: 'alex', status: 'online' },
-  { name: 'Mariya', nickname: 'mariya', status: 'away' }
+  {
+    id: 'me',
+    name: userStore.shownName,
+    username: userStore.username,
+    status: userStore.status
+  },
+  { id: 'alex', name: 'Alex', username: 'alex', status: 'online' },
+  { id: 'mariya', name: 'Mariya', username: 'mariya', status: 'away' }
 ])
+
+function authorName(msg) {
+  return msg.author === 'me' ? userStore.shownName : msg.author
+}
 
 function channelNameRule(value) {
   const normalizedName = value.trim().toLowerCase()
   if (!normalizedName) return 'Enter a channel name'
-  if (!/^[a-z0-9-]+$/.test(normalizedName)) return 'Use lowercase letters, numbers or hyphens'
+  if (!/^[a-z0-9-]+$/.test(normalizedName))
+    return 'Use lowercase letters, numbers or hyphens'
   if (textChannels.value.some(channel => channel.name === normalizedName)) {
     return 'This channel already exists'
   }
@@ -245,9 +325,12 @@ function sendMessage() {
   if (!newMessage.value.trim()) return
   currentMessages.value.push({
     id: Date.now(),
-    author: 'You',
+    author: 'me',
     text: newMessage.value,
-    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    time: new Date().toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit'
+    })
   })
   newMessage.value = ''
 }
@@ -268,7 +351,7 @@ function createChannel() {
     name,
     private: newChannelType.value === 'private',
     unread: 0,
-    owner: 'You'
+    owner: 'me'
   })
   channelMessages.value[id] = []
   activeChannel.value = id
@@ -284,10 +367,13 @@ function deleteChannel() {
 }
 
 function removeCurrentChannel() {
-  const currentIndex = textChannels.value.findIndex(channel => channel.id === activeChannel.value)
+  const currentIndex = textChannels.value.findIndex(
+    channel => channel.id === activeChannel.value
+  )
   if (currentIndex === -1 || textChannels.value.length === 1) return
 
-  const nextChannel = textChannels.value[currentIndex === 0 ? 1 : currentIndex - 1]
+  const nextChannel =
+    textChannels.value[currentIndex === 0 ? 1 : currentIndex - 1]
   textChannels.value.splice(currentIndex, 1)
   delete channelMessages.value[activeChannel.value]
   activeChannel.value = nextChannel.id

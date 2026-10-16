@@ -21,17 +21,17 @@
         <q-card-section class="row items-center no-wrap">
           <div class="avatar-wrapper q-mr-md">
             <q-avatar color="primary" text-color="white" size="48px">
-              {{ userName[0] }}
+              {{ userStore.shownName[0]?.toUpperCase() }}
             </q-avatar>
             <span class="status-dot" :class="`bg-${currentStatus.color}`" />
           </div>
 
           <div class="ellipsis">
             <div class="text-subtitle1 text-weight-bold ellipsis">
-              {{ userName }}
+              {{ userStore.shownName }}
             </div>
             <div class="text-caption text-grey-7 ellipsis">
-              @{{ userNickname }}
+              @{{ userStore.username }}
             </div>
           </div>
         </q-card-section>
@@ -53,7 +53,7 @@
             class="rounded-borders q-mx-xs"
             :active="currentStatus.value === status.value"
             active-class="bg-grey-3 text-weight-bold"
-            @click="currentStatusValue = status.value"
+            @click="userStore.status = status.value"
           >
             <q-item-section avatar class="min-width-auto q-pr-sm">
               <q-icon name="circle" size="xs" :color="status.color" />
@@ -98,13 +98,11 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { userStore } from '@/store/userStore'
 
 const router = useRouter()
-
-const userName = 'You'
-const userNickname = 'you'
 
 const statuses = [
   { value: 'online', label: 'Online', color: 'positive' },
@@ -112,10 +110,8 @@ const statuses = [
   { value: 'dnd', label: 'Do not disturb', color: 'negative' }
 ]
 
-const currentStatusValue = ref('online')
-
 const currentStatus = computed(() =>
-  statuses.find(status => status.value === currentStatusValue.value)
+  statuses.find(status => status.value === userStore.status)
 )
 
 function logout() {
