@@ -200,7 +200,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { userStore } from '@/store/userStore'
 import { chatStore } from '@/store/chatStore'
@@ -250,16 +250,7 @@ watch(
   channelName => syncChannelFromRoute(channelName)
 )
 
-const members = computed(() => [
-  {
-    id: 'me',
-    name: userStore.shownName,
-    username: userStore.username,
-    status: userStore.status
-  },
-  { id: 'alex', name: 'Alex', username: 'alex', status: 'online' },
-  { id: 'mariya', name: 'Mariya', username: 'mariya', status: 'away' }
-])
+const members = computed(() => chatStore.getMembers(userStore))
 
 function authorName(msg) {
   return msg.author === 'me' ? userStore.shownName : msg.author
@@ -301,6 +292,18 @@ function deleteChannel() {
 function removeCurrentChannel() {
   chatStore.removeActiveChannel()
 }
+
+function openMembersFromCommand() {
+  membersDialog.value = true
+}
+
+onMounted(() => {
+  window.addEventListener('nexum:list-members', openMembersFromCommand)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('nexum:list-members', openMembersFromCommand)
+})
 </script>
 
 <style scoped>

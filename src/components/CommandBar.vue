@@ -50,7 +50,10 @@ function submitCommand() {
   if (!value) return
 
   if (value.startsWith('/')) {
-    runCommand(value)
+    const commandHandled = runCommand(value)
+    if (!commandHandled && route.path.startsWith('/chat/')) {
+      chatStore.addMessage(value)
+    }
   } else if (route.path.startsWith('/chat/')) {
     chatStore.addMessage(value)
   } else {
@@ -73,7 +76,7 @@ function runCommand(value) {
       type: 'info',
       message: '/join, /invite, /revoke, /kick, /list, /cancel, /quit'
     })
-    return
+    return true
   }
 
   if (commandName === 'join' && args[0]) {
@@ -86,14 +89,23 @@ function runCommand(value) {
       type: 'positive',
       message: `${knownChannel ? 'Joined' : 'Channel requested'} #${channelName}`
     })
-    return
+    return true
+  }
+
+  if (commandName === 'list') {
+    if (!route.path.startsWith('/chat/')) {
+      $q.notify({ type: 'info', message: 'Open a channel to list its members' })
+      return true
+    }
+
+    window.dispatchEvent(new CustomEvent('nexum:list-members'))
+    return true
   }
 
   const supportedCommands = [
     'invite',
     'revoke',
     'kick',
-    'list',
     'cancel',
     'quit'
   ]
@@ -102,10 +114,10 @@ function runCommand(value) {
       type: 'info',
       message: `Command /${commandName} is available in this prototype`
     })
-    return
+    return true
   }
 
-  $q.notify({ type: 'warning', message: 'Unknown command. Try /help' })
+  return false
 }
 </script>
 

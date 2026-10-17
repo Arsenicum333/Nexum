@@ -50,6 +50,19 @@ export const chatStore = reactive({
     random: []
   },
 
+  getMembers(currentUser) {
+    return [
+      {
+        id: 'me',
+        name: currentUser.shownName,
+        username: currentUser.username,
+        status: currentUser.status
+      },
+      { id: 'alex', name: 'Alex', username: 'alex', status: 'online' },
+      { id: 'mariya', name: 'Mariya', username: 'mariya', status: 'away' }
+    ]
+  },
+
   addMessage(text) {
     const messages = this.channelMessages[this.activeChannel]
     if (!messages || !text.trim()) return
