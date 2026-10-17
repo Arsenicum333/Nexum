@@ -3,7 +3,13 @@ const routes = [
     path: '/',
     component: () => import('@/layouts/MainLayout.vue'),
     children: [
-      { path: '', component: () => import('@/pages/IndexPage.vue') },
+      {
+        path: '',
+        redirect: () => {
+          if (typeof window === 'undefined') return '/chat/general'
+          return localStorage.getItem('nexum:last-route') || '/chat/general'
+        }
+      },
       { path: 'chat/:channelName', component: () => import('@/pages/ChatPage.vue') },
       {
         path: 'account/edit',

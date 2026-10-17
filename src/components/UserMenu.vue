@@ -76,9 +76,9 @@
             class="rounded-borders q-mx-xs"
           >
             <q-item-section avatar class="min-width-auto q-pr-sm">
-              <q-icon name="edit" size="xs" />
+              <q-icon name="settings" size="xs" />
             </q-item-section>
-            <q-item-section>Edit account</q-item-section>
+            <q-item-section>Settings</q-item-section>
           </q-item>
 
           <q-item

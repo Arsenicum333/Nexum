@@ -6,11 +6,12 @@
           flat
           dense
           round
-          icon="menu"
-          aria-label="Menu"
-          @click="toggleLeftDrawer"
-        />
-
+          icon="arrow_back"
+          aria-label="Go back"
+          @click="goBack"
+        >
+          <q-tooltip>Go back</q-tooltip>
+        </q-btn>
         <q-space />
 
         <q-toolbar-title shrink class="text-weight-bold">Nexum</q-toolbar-title>
@@ -88,10 +89,20 @@
 
 <script setup>
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import CommandBar from '@/components/CommandBar.vue'
+
+const router = useRouter()
 const leftDrawerOpen = ref(false)
 
-function toggleLeftDrawer() {
-  leftDrawerOpen.value = !leftDrawerOpen.value
+function goBack() {
+  const previousRoute = window.history.state?.back
+
+  if (previousRoute && !previousRoute.startsWith('/auth/')) {
+    router.back()
+    return
+  }
+
+  router.push('/chat/general')
 }
 </script>
