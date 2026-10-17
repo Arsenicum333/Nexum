@@ -7,6 +7,7 @@ export const userStore = reactive({
   username: 'johndoe',
   displayName: 'John',
   status: 'online',
+  notificationMode: 'all',
 
   get shownName() {
     return this.displayName.trim() || this.username
