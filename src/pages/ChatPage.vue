@@ -148,56 +148,13 @@
         </div>
       </q-scroll-area>
 
-      <div class="q-px-md q-py-xs text-caption text-grey-7 typing-line border-top">
+      <div class="q-px-md q-py-xs text-caption text-grey-7 typing-line">
         <span v-if="typingUser" class="row items-center no-wrap">
           <q-spinner-dots size="20px" color="grey-7" class="q-mr-xs" />
           <b>{{ typingUser }}</b>&nbsp;is typing...
         </span>
       </div>
 
-      <div class="q-px-md q-pb-md relative-position">
-        <q-card
-          v-if="mentionOptions.length"
-          bordered
-          class="absolute"
-          style="left: 16px; right: 16px; bottom: 100%; margin-bottom: 4px; z-index: 10"
-        >
-          <q-list dense padding>
-            <div class="q-px-md q-pb-xs text-uppercase text-weight-bolder text-caption text-grey-7">
-              Mention
-            </div>
-            <q-item
-              v-for="member in mentionOptions"
-              :key="member.id"
-              clickable
-              v-ripple
-              class="rounded-borders q-mx-xs"
-              @click="insertMention(member)"
-            >
-              <q-item-section avatar class="min-width-auto q-pr-sm">
-                <q-avatar size="24px" :color="member.status === 'online' ? 'positive' : 'grey-6'" text-color="white">
-                  {{ member.name[0]?.toUpperCase() }}
-                </q-avatar>
-              </q-item-section>
-              <q-item-section>{{ member.name }}</q-item-section>
-              <q-item-section side>@{{ member.username }}</q-item-section>
-            </q-item>
-          </q-list>
-        </q-card>
-
-        <q-input
-          v-model="newMessage"
-          dense
-          outlined
-          rounded
-          :placeholder="`Write in #${currentChannelName}... use @ to mention`"
-          @keyup.enter="onEnter"
-        >
-          <template #append>
-            <q-btn round flat icon="send" color="primary" @click="sendMessage" />
-          </template>
-        </q-input>
-      </div>
     </div>
 
     <q-dialog v-model="createChannelDialog">
@@ -263,7 +220,6 @@ const createChannelDialog = ref(false)
 const membersDialog = ref(false)
 const newChannelName = ref('')
 const newChannelType = ref('public')
-const newMessage = ref('')
 const scrollArea = ref(null)
 const loadingMore = ref(false)
 const pageSize = 20
@@ -376,40 +332,12 @@ function isMentioned(msg) {
   return msg.author !== 'me' && messageParts(msg.text).some(part => part.me)
 }
 
-const mentionQuery = computed(() => {
-  const match = newMessage.value.match(/(?:^|\s)@(\w*)$/)
-  return match ? match[1].toLowerCase() : null
-})
-const mentionOptions = computed(() => {
-  if (mentionQuery.value === null) return []
-  return members.value.filter(member => member.id !== 'me' && member.username.toLowerCase().startsWith(mentionQuery.value))
-})
-
-function insertMention(member) {
-  newMessage.value = newMessage.value.replace(/@(\w*)$/, `@${member.username} `)
-}
-
-function onEnter() {
-  if (mentionOptions.value.length) {
-    insertMention(mentionOptions.value[0])
-    return
-  }
-  sendMessage()
-}
-
 function channelNameRule(value) {
   const normalizedName = value.trim().toLowerCase()
   if (!normalizedName) return 'Enter a channel name'
   if (!/^[a-z0-9-]+$/.test(normalizedName)) return 'Use lowercase letters, numbers or hyphens'
   if (chatStore.textChannels.some(channel => channel.name === normalizedName)) return 'This channel already exists'
   return true
-}
-
-function sendMessage() {
-  if (!newMessage.value.trim()) return
-  chatStore.addMessage(newMessage.value)
-  newMessage.value = ''
-  scrollToBottom()
 }
 
 function openCreateChannelDialog() {

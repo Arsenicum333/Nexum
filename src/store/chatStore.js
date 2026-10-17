@@ -1,5 +1,19 @@
 import { reactive } from 'vue'
 
+const generalHistory = Array.from({ length: 60 }, (_, index) => {
+  const minutes = 8 * 60 + index * 3
+  const hours = String(Math.floor(minutes / 60)).padStart(2, '0')
+  const minute = String(minutes % 60).padStart(2, '0')
+  const authors = ['Alex', 'Mariya', 'John']
+
+  return {
+    id: `general-history-${index + 1}`,
+    author: authors[index % authors.length],
+    text: `History message ${index + 1}: the Nexum team is discussing the next release.`,
+    time: `${hours}:${minute}`
+  }
+})
+
 export const chatStore = reactive({
   activeChannel: 'gen',
 
@@ -26,6 +40,7 @@ export const chatStore = reactive({
 
   channelMessages: {
     gen: [
+      ...generalHistory,
       {
         id: 1,
         author: 'Alex',
