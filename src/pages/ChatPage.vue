@@ -109,7 +109,16 @@
         </div>
       </div>
 
-      <q-scroll-area class="col q-pa-md">
+      <q-scroll-area ref="scrollArea" class="col q-pa-md" @scroll="onScroll">
+        <div
+          class="loader-row row justify-center items-center text-caption text-grey-6"
+        >
+          <q-spinner-dots v-if="loadingMore" size="24px" color="primary" />
+          <span v-else-if="!hasMore"
+            >Beginning of #{{ currentChannelName }}</span
+          >
+        </div>
+
         <div
           v-for="msg in currentMessages"
           :key="msg.id"
@@ -288,7 +297,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch, nextTick, onMounted } from 'vue'
 import { userStore } from '@/store/userStore'
 import NotificationsMenu from '@/pages/NotificationsMenu.vue'
 
@@ -306,8 +315,29 @@ const textChannels = ref([
   { id: 'random', name: 'random', private: false, unread: 0, owner: 'me' }
 ])
 
+const PAGE_SIZE = 20
+const startIndexes = ref({})
+const loadingMore = ref(false)
+const scrollArea = ref(null)
+
+function makeHistory(channel, count) {
+  const authors = ['Alex', 'Mariya', 'me']
+  return Array.from({ length: count }, (_, index) => {
+    const minutes = 8 * 60 + index * 3
+    const hours = String(Math.floor(minutes / 60)).padStart(2, '0')
+    const mins = String(minutes % 60).padStart(2, '0')
+    return {
+      id: `${channel}-old-${index}`,
+      author: authors[index % authors.length],
+      text: `Message ${index + 1}`,
+      time: `${hours}:${mins}`
+    }
+  })
+}
+
 const channelMessages = ref({
   gen: [
+    ...makeHistory('gen', 62),
     {
       id: 1,
       author: 'Alex',
@@ -343,7 +373,7 @@ const channelMessages = ref({
       time: '11:05'
     }
   ],
-  random: []
+  random: makeHistory('random', 45)
 })
 
 const channelTypeOptions = [
@@ -363,9 +393,82 @@ const currentChannelName = computed(() => {
   return currentChannel.value?.name || 'general'
 })
 
-const currentMessages = computed(
-  () => channelMessages.value[activeChannel.value] || []
+const currentMessages = computed(() => {
+  const all = channelMessages.value[activeChannel.value] || []
+  return all.slice(startIndexes.value[activeChannel.value] ?? 0)
+})
+
+const hasMore = computed(
+  () => (startIndexes.value[activeChannel.value] ?? 0) > 0
 )
+
+function ensureStartIndex(channel) {
+  if (startIndexes.value[channel] !== undefined) return
+  const total = (channelMessages.value[channel] || []).length
+  startIndexes.value[channel] = Math.max(0, total - PAGE_SIZE)
+}
+
+function getScrollElement() {
+  return scrollArea.value?.getScrollTarget()
+}
+
+function scrollToBottom() {
+  nextTick(() => {
+    const el = getScrollElement()
+    if (!el) return
+    el.scrollTop = el.scrollHeight
+    fillIfShort()
+  })
+}
+
+function fillIfShort() {
+  const el = getScrollElement()
+  if (el && hasMore.value && el.scrollHeight <= el.clientHeight) loadMore()
+}
+
+function loadMore() {
+  if (loadingMore.value || !hasMore.value) return
+  const channel = activeChannel.value
+  loadingMore.value = true
+
+  setTimeout(() => {
+    if (startIndexes.value[channel] === undefined) {
+      loadingMore.value = false
+      return
+    }
+    const el = getScrollElement()
+    const heightBefore = el ? el.scrollHeight : 0
+    const positionBefore = el ? el.scrollTop : 0
+
+    startIndexes.value[channel] = Math.max(
+      0,
+      startIndexes.value[channel] - PAGE_SIZE
+    )
+    loadingMore.value = false
+
+    nextTick(() => {
+      if (el && channel === activeChannel.value) {
+        el.scrollTop = positionBefore + (el.scrollHeight - heightBefore)
+      }
+      fillIfShort()
+    })
+  }, 600)
+}
+
+function onScroll(info) {
+  if (info.verticalPosition < 80) loadMore()
+}
+
+watch(
+  activeChannel,
+  channel => {
+    ensureStartIndex(channel)
+    scrollToBottom()
+  },
+  { immediate: true }
+)
+
+onMounted(scrollToBottom)
 
 const members = computed(() => [
   {
@@ -442,7 +545,7 @@ function channelNameRule(value) {
 
 function sendMessage() {
   if (!newMessage.value.trim()) return
-  currentMessages.value.push({
+  channelMessages.value[activeChannel.value].push({
     id: Date.now(),
     author: 'me',
     text: newMessage.value,
@@ -452,6 +555,7 @@ function sendMessage() {
     })
   })
   newMessage.value = ''
+  scrollToBottom()
 }
 
 function openCreateChannelDialog() {
@@ -495,6 +599,7 @@ function removeCurrentChannel() {
     textChannels.value[currentIndex === 0 ? 1 : currentIndex - 1]
   textChannels.value.splice(currentIndex, 1)
   delete channelMessages.value[activeChannel.value]
+  delete startIndexes.value[activeChannel.value]
   activeChannel.value = nextChannel.id
 }
 </script>
