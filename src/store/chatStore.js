@@ -1,7 +1,22 @@
 import { reactive } from 'vue'
 
+const generalHistory = Array.from({ length: 60 }, (_, index) => {
+  const minutes = 8 * 60 + index * 3
+  const hours = String(Math.floor(minutes / 60)).padStart(2, '0')
+  const minute = String(minutes % 60).padStart(2, '0')
+  const authors = ['Alex', 'Mariya', 'John']
+
+  return {
+    id: `general-history-${index + 1}`,
+    author: authors[index % authors.length],
+    text: `History message ${index + 1}: the Nexum team is discussing the next release.`,
+    time: `${hours}:${minute}`
+  }
+})
+
 export const chatStore = reactive({
   activeChannel: 'gen',
+  membersDialogOpen: false,
 
   textChannels: [
     { id: 'gen', name: 'general', private: false, unread: 0, owner: 'me' },
@@ -13,11 +28,20 @@ export const chatStore = reactive({
       owner: 'me'
     },
     { id: 'dev', name: 'developers', private: true, unread: 0, owner: 'me' },
-    { id: 'random', name: 'random', private: false, unread: 0, owner: 'me' }
+    { id: 'random', name: 'random', private: false, unread: 0, owner: 'me' },
+    {
+      id: 'design',
+      name: 'design-team',
+      private: true,
+      unread: 0,
+      owner: 'mariya',
+      invited: true
+    }
   ],
 
   channelMessages: {
     gen: [
+      ...generalHistory,
       {
         id: 1,
         author: 'Alex',
@@ -47,7 +71,14 @@ export const chatStore = reactive({
         time: '11:05'
       }
     ],
-    random: []
+    random: [],
+    design: []
+  },
+
+  get sortedChannels() {
+    return [...this.textChannels].sort(
+      (first, second) => Number(Boolean(second.invited)) - Number(Boolean(first.invited))
+    )
   },
 
   getMembers(currentUser) {
@@ -61,6 +92,10 @@ export const chatStore = reactive({
       { id: 'alex', name: 'Alex', username: 'alex', status: 'online' },
       { id: 'mariya', name: 'Mariya', username: 'mariya', status: 'away' }
     ]
+  },
+
+  openMembersDialog() {
+    this.membersDialogOpen = true
   },
 
   addMessage(text) {
@@ -80,22 +115,24 @@ export const chatStore = reactive({
 
   createChannel(name, isPrivate) {
     const id = `${name}-${Date.now()}`
-    this.textChannels.push({
+    const channel = {
       id,
       name,
       private: isPrivate,
       unread: 0,
       owner: 'me'
-    })
+    }
+    this.textChannels.push(channel)
     this.channelMessages[id] = []
     this.activeChannel = id
+    return channel
   },
 
   removeActiveChannel() {
     const currentIndex = this.textChannels.findIndex(
       channel => channel.id === this.activeChannel
     )
-    if (currentIndex === -1 || this.textChannels.length === 1) return
+    if (currentIndex === -1 || this.textChannels.length === 1) return null
 
     const nextChannel =
       this.textChannels[currentIndex === 0 ? 1 : currentIndex - 1]
@@ -103,5 +140,6 @@ export const chatStore = reactive({
     this.textChannels.splice(currentIndex, 1)
     delete this.channelMessages[removedChannel]
     this.activeChannel = nextChannel.id
+    return nextChannel
   }
 })

@@ -7,7 +7,10 @@ const routes = [
         path: '',
         redirect: () => {
           if (typeof window === 'undefined') return '/chat/general'
-          return localStorage.getItem('nexum:last-route') || '/chat/general'
+          const lastRoute = localStorage.getItem('nexum:last-route')
+          const isValidRoute =
+            lastRoute === '/account/edit' || /^\/chat\/[a-z0-9-]+$/.test(lastRoute || '')
+          return isValidRoute ? lastRoute : '/chat/general'
         }
       },
       { path: 'chat/:channelName', component: () => import('@/pages/ChatPage.vue') },

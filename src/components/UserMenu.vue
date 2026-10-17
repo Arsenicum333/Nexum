@@ -116,6 +116,7 @@ const currentStatus = computed(() =>
 )
 
 function logout() {
+  userStore.setAuthenticated(false)
   router.push('/auth/login')
 }
 </script>
