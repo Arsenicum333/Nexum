@@ -129,7 +129,17 @@
         </div>
       </q-scroll-area>
 
-      <div class="q-pa-md border-top">
+      <div
+        class="q-px-md q-py-xs text-caption text-grey-7 typing-line border-top"
+      >
+        <span v-if="typingUser" class="row items-center no-wrap">
+          <q-spinner-dots size="20px" color="grey-7" class="q-mr-xs" />
+          <b>{{ typingUser }}</b
+          >&nbsp;is typing...
+        </span>
+      </div>
+
+      <div class="q-px-md q-pb-md">
         <q-input
           v-model="newMessage"
           dense
@@ -288,6 +298,10 @@ const currentChannel = computed(() => {
   return textChannels.value.find(channel => channel.id === activeChannel.value)
 })
 
+const typingUser = computed(() =>
+  activeChannel.value === 'random' ? 'Alex' : ''
+)
+
 const currentChannelName = computed(() => {
   return currentChannel.value?.name || 'general'
 })
@@ -398,6 +412,10 @@ function removeCurrentChannel() {
 
 .border-top {
   border-top: 1px solid #e0e0e0;
+}
+
+.typing-line {
+  min-height: 28px;
 }
 
 .leading-tight {
