@@ -87,7 +87,7 @@
             dense
             icon="people"
             color="grey-7"
-            @click="membersDialog = true"
+            @click="chatStore.openMembersDialog()"
           >
             <q-tooltip>View members</q-tooltip>
           </q-btn>
@@ -148,8 +148,11 @@
         </div>
       </q-scroll-area>
 
-      <div class="q-px-md q-py-xs text-caption text-grey-7 typing-line">
-        <span v-if="typingUser" class="row items-center no-wrap">
+      <div
+        v-if="typingUser"
+        class="q-px-md q-py-xs text-caption text-grey-7"
+      >
+        <span class="row items-center no-wrap">
           <q-spinner-dots size="20px" color="grey-7" class="q-mr-xs" />
           <b>{{ typingUser }}</b>&nbsp;is typing...
         </span>
@@ -176,7 +179,7 @@
       </q-card>
     </q-dialog>
 
-    <q-dialog v-model="membersDialog">
+    <q-dialog v-model="chatStore.membersDialogOpen">
       <q-card style="width: 360px; max-width: 90vw">
         <q-card-section class="row items-center justify-between">
           <div>
@@ -208,7 +211,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, nextTick, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { userStore } from '@/store/userStore'
 import { chatStore } from '@/store/chatStore'
@@ -217,7 +220,6 @@ import NotificationsMenu from '@/components/NotificationsMenu.vue'
 const route = useRoute()
 const router = useRouter()
 const createChannelDialog = ref(false)
-const membersDialog = ref(false)
 const newChannelName = ref('')
 const newChannelType = ref('public')
 const scrollArea = ref(null)
@@ -310,10 +312,6 @@ watch(
 )
 onMounted(() => {
   scrollToBottom()
-  window.addEventListener('nexum:list-members', openMembersFromCommand)
-})
-onBeforeUnmount(() => {
-  window.removeEventListener('nexum:list-members', openMembersFromCommand)
 })
 
 function authorName(msg) {
@@ -349,20 +347,19 @@ function openCreateChannelDialog() {
 function createChannel() {
   const name = newChannelName.value.trim().toLowerCase()
   if (channelNameRule(name) !== true) return
-  chatStore.createChannel(name, newChannelType.value === 'private')
+  const channel = chatStore.createChannel(name, newChannelType.value === 'private')
+  router.push(`/chat/${channel.name}`)
   createChannelDialog.value = false
 }
 
 function leaveChannel() {
-  chatStore.removeActiveChannel()
+  const channel = chatStore.removeActiveChannel()
+  if (channel) router.push(`/chat/${channel.name}`)
 }
 
 function deleteChannel() {
-  chatStore.removeActiveChannel()
-}
-
-function openMembersFromCommand() {
-  membersDialog.value = true
+  const channel = chatStore.removeActiveChannel()
+  if (channel) router.push(`/chat/${channel.name}`)
 }
 </script>
 
@@ -385,7 +382,4 @@ function openMembersFromCommand() {
   border-top: 1px solid #e0e0e0;
 }
 
-.typing-line {
-  min-height: 28px;
-}
 </style>

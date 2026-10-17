@@ -16,6 +16,7 @@ const generalHistory = Array.from({ length: 60 }, (_, index) => {
 
 export const chatStore = reactive({
   activeChannel: 'gen',
+  membersDialogOpen: false,
 
   textChannels: [
     { id: 'gen', name: 'general', private: false, unread: 0, owner: 'me' },
@@ -93,6 +94,10 @@ export const chatStore = reactive({
     ]
   },
 
+  openMembersDialog() {
+    this.membersDialogOpen = true
+  },
+
   addMessage(text) {
     const messages = this.channelMessages[this.activeChannel]
     if (!messages || !text.trim()) return
@@ -110,22 +115,24 @@ export const chatStore = reactive({
 
   createChannel(name, isPrivate) {
     const id = `${name}-${Date.now()}`
-    this.textChannels.push({
+    const channel = {
       id,
       name,
       private: isPrivate,
       unread: 0,
       owner: 'me'
-    })
+    }
+    this.textChannels.push(channel)
     this.channelMessages[id] = []
     this.activeChannel = id
+    return channel
   },
 
   removeActiveChannel() {
     const currentIndex = this.textChannels.findIndex(
       channel => channel.id === this.activeChannel
     )
-    if (currentIndex === -1 || this.textChannels.length === 1) return
+    if (currentIndex === -1 || this.textChannels.length === 1) return null
 
     const nextChannel =
       this.textChannels[currentIndex === 0 ? 1 : currentIndex - 1]
@@ -133,5 +140,6 @@ export const chatStore = reactive({
     this.textChannels.splice(currentIndex, 1)
     delete this.channelMessages[removedChannel]
     this.activeChannel = nextChannel.id
+    return nextChannel
   }
 })

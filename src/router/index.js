@@ -35,7 +35,11 @@ export default defineRouter((/* { store, ssrContext } */) => {
   })
 
   Router.afterEach(to => {
-    if (typeof window !== 'undefined' && !to.path.startsWith('/auth/')) {
+    if (
+      typeof window !== 'undefined' &&
+      !to.path.startsWith('/auth/') &&
+      to.path !== '/'
+    ) {
       localStorage.setItem('nexum:last-route', to.fullPath)
     }
   })

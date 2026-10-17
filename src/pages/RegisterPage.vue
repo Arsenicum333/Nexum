@@ -102,6 +102,7 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { userStore } from '@/store/userStore'
 
 const router = useRouter()
 
@@ -113,6 +114,7 @@ const password = ref('')
 const passwordRepeat = ref('')
 
 function onSubmit() {
+  userStore.setAuthenticated(true)
   router.push('/chat/general')
 }
 </script>

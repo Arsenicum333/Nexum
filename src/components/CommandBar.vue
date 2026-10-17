@@ -171,7 +171,7 @@ function runCommand(value) {
       return true
     }
 
-    window.dispatchEvent(new CustomEvent('nexum:list-members'))
+    chatStore.openMembersDialog()
     return true
   }
 

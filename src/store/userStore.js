@@ -8,6 +8,9 @@ export const userStore = reactive({
   displayName: 'John',
   status: 'online',
   notificationMode: 'all',
+  authenticated:
+    typeof window !== 'undefined' &&
+    localStorage.getItem('nexum:authenticated') === 'true',
 
   get shownName() {
     return this.displayName.trim() || this.username
@@ -15,5 +18,13 @@ export const userStore = reactive({
 
   update(data) {
     Object.assign(this, data)
+  },
+
+  setAuthenticated(value) {
+    this.authenticated = value
+    if (typeof window === 'undefined') return
+
+    if (value) localStorage.setItem('nexum:authenticated', 'true')
+    else localStorage.removeItem('nexum:authenticated')
   }
 })
