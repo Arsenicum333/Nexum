@@ -110,7 +110,12 @@
       </div>
 
       <q-scroll-area class="col q-pa-md">
-        <div v-for="msg in currentMessages" :key="msg.id" class="q-mb-md">
+        <div
+          v-for="msg in currentMessages"
+          :key="msg.id"
+          class="message-row q-mb-md q-pa-xs rounded-borders"
+          :class="{ 'mention-row bg-orange-1': isMentioned(msg) }"
+        >
           <div class="row items-center q-mb-xs">
             <q-avatar
               size="28px"
@@ -124,7 +129,22 @@
             <span class="text-caption text-grey-6">{{ msg.time }}</span>
           </div>
           <div class="q-pl-xl text-body2 text-grey-9">
-            {{ msg.text }}
+            <template
+              v-for="(part, index) in messageParts(msg.text)"
+              :key="index"
+            >
+              <span
+                v-if="part.mention"
+                class="mention text-weight-bold"
+                :class="
+                  part.me
+                    ? 'bg-orange-3 text-orange-10'
+                    : 'bg-blue-1 text-primary'
+                "
+                >{{ part.text }}</span
+              >
+              <span v-else>{{ part.text }}</span>
+            </template>
           </div>
         </div>
       </q-scroll-area>
@@ -139,14 +159,45 @@
         </span>
       </div>
 
-      <div class="q-px-md q-pb-md">
+      <div class="q-px-md q-pb-md relative-position">
+        <q-card v-if="mentionOptions.length" bordered class="mention-popup">
+          <q-list dense padding>
+            <div
+              class="q-px-md q-pb-xs text-uppercase text-weight-bolder text-caption text-grey-7"
+            >
+              Mention
+            </div>
+
+            <q-item
+              v-for="member in mentionOptions"
+              :key="member.id"
+              clickable
+              v-ripple
+              class="rounded-borders q-mx-xs"
+              @click="insertMention(member)"
+            >
+              <q-item-section avatar class="min-width-auto q-pr-sm">
+                <q-avatar
+                  size="24px"
+                  :color="member.status === 'online' ? 'positive' : 'grey-6'"
+                  text-color="white"
+                >
+                  {{ member.name[0]?.toUpperCase() }}
+                </q-avatar>
+              </q-item-section>
+              <q-item-section>{{ member.name }}</q-item-section>
+              <q-item-section side>@{{ member.username }}</q-item-section>
+            </q-item>
+          </q-list>
+        </q-card>
+
         <q-input
           v-model="newMessage"
           dense
           outlined
           rounded
-          :placeholder="`Write in #${currentChannelName}...`"
-          @keyup.enter="sendMessage"
+          :placeholder="`Write in #${currentChannelName}... use @ to mention`"
+          @keyup.enter="onEnter"
         >
           <template v-slot:append>
             <q-btn
@@ -268,6 +319,12 @@ const channelMessages = ref({
       author: 'Mariya',
       text: 'Hello everyone! How is the development going?',
       time: '12:32'
+    },
+    {
+      id: 5,
+      author: 'Alex',
+      text: `Hey @${userStore.username}, can you check the new design before Friday?`,
+      time: '12:35'
     }
   ],
   ann: [
@@ -320,6 +377,53 @@ const members = computed(() => [
   { id: 'alex', name: 'Alex', username: 'alex', status: 'online' },
   { id: 'mariya', name: 'Mariya', username: 'mariya', status: 'away' }
 ])
+
+const mentionQuery = computed(() => {
+  const match = newMessage.value.match(/(?:^|\s)@(\w*)$/)
+  return match ? match[1].toLowerCase() : null
+})
+
+const mentionOptions = computed(() => {
+  if (mentionQuery.value === null) return []
+  return members.value.filter(
+    member =>
+      member.id !== 'me' &&
+      member.username.toLowerCase().startsWith(mentionQuery.value)
+  )
+})
+
+function messageParts(text) {
+  return text
+    .split(/(@\w+)/g)
+    .filter(Boolean)
+    .map(part => {
+      const username = part.slice(1).toLowerCase()
+      const isMention =
+        part.startsWith('@') &&
+        members.value.some(member => member.username.toLowerCase() === username)
+      return {
+        text: part,
+        mention: isMention,
+        me: isMention && username === userStore.username.toLowerCase()
+      }
+    })
+}
+
+function isMentioned(msg) {
+  return msg.author !== 'me' && messageParts(msg.text).some(part => part.me)
+}
+
+function insertMention(member) {
+  newMessage.value = newMessage.value.replace(/@(\w*)$/, `@${member.username} `)
+}
+
+function onEnter() {
+  if (mentionOptions.value.length) {
+    insertMention(mentionOptions.value[0])
+    return
+  }
+  sendMessage()
+}
 
 function authorName(msg) {
   return msg.author === 'me' ? userStore.shownName : msg.author
