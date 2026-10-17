@@ -30,13 +30,23 @@
           </div>
 
           <q-item
-            v-for="channel in textChannels"
+            v-for="channel in sortedChannels"
             :key="channel.id"
             clickable
             v-ripple
             :active="activeChannel === channel.id"
-            active-class="bg-grey-4 text-primary text-weight-bold"
+            :active-class="
+              channel.invited
+                ? 'bg-orange text-white text-weight-bold'
+                : 'bg-grey-4 text-primary text-weight-bold'
+            "
             class="rounded-borders q-mx-xs q-mb-xs"
+            :class="{ 'bg-orange text-white': channel.invited }"
+            :style="
+              channel.invited
+                ? 'box-shadow: 0 0 10px rgba(255, 152, 0, 0.6)'
+                : ''
+            "
             @click="activeChannel = channel.id"
           >
             <q-item-section avatar class="min-width-auto q-pr-sm">
@@ -45,7 +55,17 @@
             <q-item-section class="ellipsis">
               {{ channel.name }}
             </q-item-section>
-            <q-item-section side v-if="channel.unread">
+            <q-item-section side v-if="channel.invited">
+              <q-badge
+                rounded
+                color="orange-10"
+                text-color="white"
+                label="!"
+                class="text-weight-bold"
+                style="padding: 3px 8px"
+              />
+            </q-item-section>
+            <q-item-section side v-else-if="channel.unread">
               <q-badge rounded color="primary" :label="channel.unread" />
             </q-item-section>
           </q-item>
@@ -111,7 +131,8 @@
 
       <q-scroll-area ref="scrollArea" class="col q-pa-md" @scroll="onScroll">
         <div
-          class="loader-row row justify-center items-center text-caption text-grey-6"
+          class="row justify-center items-center text-caption text-grey-6"
+          style="min-height: 32px"
         >
           <q-spinner-dots v-if="loadingMore" size="24px" color="primary" />
           <span v-else-if="!hasMore"
@@ -122,8 +143,13 @@
         <div
           v-for="msg in currentMessages"
           :key="msg.id"
-          class="message-row q-mb-md q-pa-xs rounded-borders"
-          :class="{ 'mention-row bg-orange-1': isMentioned(msg) }"
+          class="q-mb-md q-pa-xs rounded-borders"
+          :class="{ 'bg-orange-1': isMentioned(msg) }"
+          :style="{
+            borderLeft: isMentioned(msg)
+              ? '3px solid #ff9800'
+              : '3px solid transparent'
+          }"
         >
           <div class="row items-center q-mb-xs">
             <q-avatar
@@ -144,7 +170,7 @@
             >
               <span
                 v-if="part.mention"
-                class="mention text-weight-bold"
+                class="q-px-xs rounded-borders text-weight-bold"
                 :class="
                   part.me
                     ? 'bg-orange-3 text-orange-10'
@@ -169,7 +195,18 @@
       </div>
 
       <div class="q-px-md q-pb-md relative-position">
-        <q-card v-if="mentionOptions.length" bordered class="mention-popup">
+        <q-card
+          v-if="mentionOptions.length"
+          bordered
+          class="absolute"
+          style="
+            left: 16px;
+            right: 16px;
+            bottom: 100%;
+            margin-bottom: 4px;
+            z-index: 10;
+          "
+        >
           <q-list dense padding>
             <div
               class="q-px-md q-pb-xs text-uppercase text-weight-bolder text-caption text-grey-7"
@@ -312,7 +349,15 @@ const textChannels = ref([
   { id: 'gen', name: 'general', private: false, unread: 0, owner: 'me' },
   { id: 'ann', name: 'announcements', private: false, unread: 2, owner: 'me' },
   { id: 'dev', name: 'developers', private: true, unread: 0, owner: 'me' },
-  { id: 'random', name: 'random', private: false, unread: 0, owner: 'me' }
+  { id: 'random', name: 'random', private: false, unread: 0, owner: 'me' },
+  {
+    id: 'design',
+    name: 'design-team',
+    private: true,
+    unread: 0,
+    owner: 'mariya',
+    invited: true
+  }
 ])
 
 const PAGE_SIZE = 20
@@ -373,7 +418,8 @@ const channelMessages = ref({
       time: '11:05'
     }
   ],
-  random: makeHistory('random', 45)
+  random: makeHistory('random', 45),
+  design: []
 })
 
 const channelTypeOptions = [
@@ -469,6 +515,12 @@ watch(
 )
 
 onMounted(scrollToBottom)
+
+const sortedChannels = computed(() =>
+  [...textChannels.value].sort(
+    (a, b) => Number(!!b.invited) - Number(!!a.invited)
+  )
+)
 
 const members = computed(() => [
   {
