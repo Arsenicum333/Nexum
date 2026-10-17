@@ -1,7 +1,9 @@
 <template>
   <q-page class="flex row no-wrap fit">
     <div class="settings-sidebar bg-grey-2 column">
-      <div class="q-pa-md text-weight-bold text-subtitle1">Settings</div>
+      <div class="q-pa-md text-weight-bold text-subtitle1 border-bottom">
+        Settings
+      </div>
 
       <q-list padding dense class="col">
         <q-item
@@ -15,21 +17,12 @@
         </q-item>
       </q-list>
 
-      <q-separator />
-      <q-list dense>
-        <q-item clickable v-ripple to="/chat/general">
-          <q-item-section avatar>
-            <q-icon name="arrow_back" />
-          </q-item-section>
-          <q-item-section>Back to chat</q-item-section>
-        </q-item>
-      </q-list>
     </div>
 
     <div class="col scroll bg-white q-pa-lg">
       <div class="settings-content">
         <div class="text-h5 text-weight-bold">My Account</div>
-        <div class="text-subtitle2 text-grey-7 q-mb-md">Edit your profile</div>
+        <div class="text-subtitle2 text-grey-7 q-mb-md">Edit profile</div>
 
         <div class="row items-center q-mb-lg">
           <q-avatar
@@ -141,6 +134,10 @@ function onSubmit() {
   width: 240px;
   min-width: 240px;
   border-right: 1px solid #e0e0e0;
+}
+
+.border-bottom {
+  border-bottom: 1px solid #e0e0e0;
 }
 
 .settings-content {

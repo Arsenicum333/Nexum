@@ -34,5 +34,11 @@ export default defineRouter((/* { store, ssrContext } */) => {
     history: createHistory(import.meta.env.QUASAR_VUE_ROUTER_BASE)
   })
 
+  Router.afterEach(to => {
+    if (typeof window !== 'undefined' && !to.path.startsWith('/auth/')) {
+      localStorage.setItem('nexum:last-route', to.fullPath)
+    }
+  })
+
   return Router
 })

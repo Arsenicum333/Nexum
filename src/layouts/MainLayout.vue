@@ -6,27 +6,12 @@
           flat
           dense
           round
-          icon="menu"
-          aria-label="Menu"
-          @click="toggleLeftDrawer"
-        />
-
-        <div class="absolute-center search-container">
-          <q-input
-            v-model="search"
-            dense
-            standout
-            dark
-            rounded
-            placeholder="Search..."
-            class="search-input"
-          >
-            <template v-slot:append>
-              <q-icon name="search" />
-            </template>
-          </q-input>
-        </div>
-
+          icon="arrow_back"
+          aria-label="Go back"
+          @click="goBack"
+        >
+          <q-tooltip>Go back</q-tooltip>
+        </q-btn>
         <q-space />
 
         <q-toolbar-title shrink class="text-weight-bold">Nexum</q-toolbar-title>
@@ -89,40 +74,35 @@
 
         <q-space />
 
-        <q-separator />
-        <q-separator />
-        <q-list>
-          <UserMenu />
-        </q-list>
       </div>
     </q-drawer>
 
     <q-page-container>
       <router-view />
     </q-page-container>
+
+    <q-footer bordered class="bg-white text-dark q-pa-none">
+      <CommandBar />
+    </q-footer>
   </q-layout>
 </template>
 
 <script setup>
 import { ref } from 'vue'
-import UserMenu from '@/pages/UserMenu.vue'
+import { useRouter } from 'vue-router'
+import CommandBar from '@/components/CommandBar.vue'
+
+const router = useRouter()
 const leftDrawerOpen = ref(false)
 
-function toggleLeftDrawer() {
-  leftDrawerOpen.value = !leftDrawerOpen.value
+function goBack() {
+  const previousRoute = window.history.state?.back
+
+  if (previousRoute && !previousRoute.startsWith('/auth/')) {
+    router.back()
+    return
+  }
+
+  router.push('/chat/general')
 }
 </script>
-
-<style scoped>
-.search-container {
-  width: 100%;
-  max-width: 600px;
-  padding: 0 16px;
-}
-
-@media (max-width: 600px) {
-  .search-container {
-    max-width: 200px;
-  }
-}
-</style>
