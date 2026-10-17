@@ -1,0 +1,148 @@
+@startuml physical-model
+title Nexum - Physical Data Model
+
+hide methods
+/'skinparam linetype ortho'/
+
+entity users {
+  id : BIGINT <<PK>>
+  --
+  first_name : VARCHAR(40)
+  last_name : VARCHAR(40)
+  display_name : VARCHAR(40)
+  username : VARCHAR(40) <<UQ>>
+  email : VARCHAR(255) <<UQ>>
+  password_hash : VARCHAR(255)
+  status : VARCHAR(16) <<CHECK>>
+  created_at : TIMESTAMP
+  updated_at : TIMESTAMP
+  --
+  CHECK (status IN ('ONLINE', 'DND', 'OFFLINE'))
+}
+
+entity notification_settings {
+  id : BIGINT <<PK>>
+  --
+  user_id : BIGINT <<FK, UQ>>
+  notification_scope : VARCHAR(16) <<CHECK>>
+  browser_notifications : BOOLEAN
+  updated_at : TIMESTAMP
+  --
+  UNIQUE (user_id)
+  CHECK (notification_scope IN ('ALL', 'MENTIONS_ONLY'))
+}
+
+entity channels {
+  id : BIGINT <<PK>>
+  --
+  name : VARCHAR(40)
+  channel_type : VARCHAR(8) <<CHECK>>
+  owner_id : BIGINT <<FK>>
+  created_at : TIMESTAMP
+  last_activity_at : TIMESTAMP
+  deleted_at : TIMESTAMP <<NULL>>
+  --
+  CHECK (channel_type IN ('PUBLIC', 'PRIVATE'))
+}
+
+entity channel_members {
+  id : BIGINT <<PK>>
+  --
+  channel_id : BIGINT <<FK>>
+  user_id : BIGINT <<FK>>
+  role : VARCHAR(16) <<CHECK>>
+  membership_status : VARCHAR(16) <<CHECK>>
+  joined_at : TIMESTAMP
+  left_at : TIMESTAMP <<NULL>>
+  --
+  UNIQUE (channel_id, user_id)
+  CHECK (role IN ('OWNER', 'MEMBER'))
+  CHECK (membership_status IN ('ACTIVE', 'LEFT', 'KICKED'))
+}
+
+entity messages {
+  id : BIGINT <<PK>>
+  --
+  channel_id : BIGINT <<FK>>
+  author_id : BIGINT <<FK>>
+  content : TEXT
+  created_at : TIMESTAMP
+  edited_at : TIMESTAMP <<NULL>>
+  deleted_at : TIMESTAMP <<NULL>>
+}
+
+entity message_mentions {
+  id : BIGINT <<PK>>
+  --
+  message_id : BIGINT <<FK>>
+  mentioned_user_id : BIGINT <<FK>>
+  --
+  UNIQUE (message_id, mentioned_user_id)
+}
+
+entity invitations {
+  id : BIGINT <<PK>>
+  --
+  channel_id : BIGINT <<FK>>
+  inviter_id : BIGINT <<FK>>
+  invitee_id : BIGINT <<FK>>
+  status : VARCHAR(16) <<CHECK>>
+  created_at : TIMESTAMP
+  responded_at : TIMESTAMP <<NULL>>
+  --
+  CHECK (status IN ('PENDING', 'ACCEPTED', 'DECLINED', 'REVOKED'))
+  CHECK (inviter_id <> invitee_id)
+}
+
+entity kick_votes {
+  id : BIGINT <<PK>>
+  --
+  channel_id : BIGINT <<FK>>
+  target_user_id : BIGINT <<FK>>
+  voter_user_id : BIGINT <<FK>>
+  created_at : TIMESTAMP
+  --
+  UNIQUE (channel_id, target_user_id, voter_user_id)
+  CHECK (target_user_id <> voter_user_id)
+}
+
+entity channel_bans {
+  id : BIGINT <<PK>>
+  --
+  channel_id : BIGINT <<FK>>
+  user_id : BIGINT <<FK>>
+  reason : VARCHAR(255) <<NULL>>
+  created_at : TIMESTAMP
+  revoked_at : TIMESTAMP <<NULL>>
+  created_by : BIGINT <<FK>>
+}
+
+note right of channels
+  name must be unique among active channels.
+  Deleted channel names can be reused.
+end note
+
+note right of channel_bans
+  At most one active ban per user
+  in a channel.
+end note
+
+users "1" -- "0..1" notification_settings : has
+users "1" -- "0..*" channels : owns
+users "1" -- "0..*" channel_members : joins
+channels "1" -- "0..*" channel_members : contains
+users "1" -- "0..*" messages : authors
+channels "1" -- "0..*" messages : contains
+messages "1" -- "0..*" message_mentions : contains
+users "1" -- "0..*" message_mentions : is mentioned
+channels "1" -- "0..*" invitations : has
+users "1" -- "0..*" invitations : sends
+users "1" -- "0..*" invitations : receives
+channels "1" -- "0..*" kick_votes : records
+users "1" -- "0..*" kick_votes : casts
+users "1" -- "0..*" kick_votes : is target
+channels "1" -- "0..*" channel_bans : contains
+users "1" -- "0..*" channel_bans : is banned
+users "1" -- "0..*" channel_bans : creates
+
+@enduml
