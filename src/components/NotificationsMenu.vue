@@ -7,6 +7,9 @@
     color="grey-7"
     aria-label="Notifications"
   >
+
+    <q-tooltip>Notifications</q-tooltip>
+
     <q-badge v-if="unreadCount" color="negative" floating rounded>
       {{ unreadCount }}
     </q-badge>

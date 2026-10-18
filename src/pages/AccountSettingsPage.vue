@@ -1,6 +1,9 @@
 <template>
-  <q-page class="flex row no-wrap fit">
-    <div class="settings-sidebar bg-grey-2 column">
+  <q-page class="flex fit" :class="isMobile ? 'column' : 'row'">
+    <div
+      v-if="!isMobile"
+      class="settings-sidebar bg-grey-2 column"
+    >
       <div class="q-pa-md text-weight-bold text-subtitle1 border-bottom">
         Settings
       </div>
@@ -16,13 +19,29 @@
           <q-item-section>My Account</q-item-section>
         </q-item>
       </q-list>
-
     </div>
 
-    <div class="col scroll bg-white q-pa-lg">
+    <div
+      class="col scroll bg-white q-pa-md q-pa-lg-md"
+      style="min-width: 0;"
+    >
       <div class="settings-content">
-        <div class="text-h5 text-weight-bold">My Account</div>
-        <div class="text-subtitle2 text-grey-7 q-mb-md">Edit profile</div>
+        <div class="row items-center q-mb-md">
+          <q-btn
+            v-if="isMobile"
+            flat
+            round
+            dense
+            icon="arrow_back"
+            aria-label="Back to settings"
+            class="q-mr-sm"
+            @click="$router.back()"
+          />
+          <div>
+            <div class="text-h5 text-weight-bold">My Account</div>
+            <div class="text-subtitle2 text-grey-7">Edit profile</div>
+          </div>
+        </div>
 
         <div class="row items-center q-mb-lg">
           <q-avatar
@@ -33,13 +52,13 @@
           >
             {{ userStore.shownName[0]?.toUpperCase() }}
           </q-avatar>
-          <div>
-            <div class="text-h6 text-weight-bold">
+          <div class="ellipsis">
+            <div class="text-h6 text-weight-bold ellipsis">
               {{ userStore.shownName }}
             </div>
-            <div class="text-caption text-grey-7"
-              >@{{ userStore.username }}</div
-            >
+            <div class="text-caption text-grey-7 ellipsis">
+              @{{ userStore.username }}
+            </div>
           </div>
         </div>
 
@@ -96,7 +115,7 @@
             color="primary"
             label="Save changes"
             no-caps
-            class="q-mt-md"
+            class="q-mt-md full-width-xs"
           />
         </q-form>
       </div>
@@ -105,11 +124,12 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useQuasar } from 'quasar'
 import { userStore } from '@/store/userStore'
 
 const $q = useQuasar()
+const isMobile = computed(() => $q.screen.lt.sm)
 
 const firstName = ref(userStore.firstName)
 const lastName = ref(userStore.lastName)
@@ -132,6 +152,7 @@ function onSubmit() {
 <style scoped>
 .settings-sidebar {
   width: 15rem;
+  min-width: 15rem;
   border-right: 1px solid #e0e0e0;
 }
 
@@ -143,52 +164,19 @@ function onSubmit() {
   max-width: 37.5rem;
 }
 
-@media (max-width: 1024px) {
-  .settings-sidebar {
+@media (max-width: 600px) {
+  .full-width-xs {
     width: 100%;
-    min-width: 0;
-    height: auto;
-    flex: 0 0 auto;
-    border-right: 0;
-    border-bottom: 1px solid #e0e0e0;
-  }
-
-  .settings-sidebar > div:first-child {
-    padding: 0.75rem 1rem;
-    font-size: 0.9rem;
-  }
-
-  .settings-sidebar > .q-list {
-    display: flex;
-    padding: 0.25rem 0.5rem;
-  }
-
-  .settings-sidebar .q-item {
-    min-height: 2.5rem;
-    padding-left: 0.75rem;
-    padding-right: 0.75rem;
-  }
-
-  .settings-sidebar .q-item-section {
-    font-size: 0.875rem;
-  }
-
-  .settings-content {
-    max-width: none;
   }
 
   .settings-content > .text-h5 {
-    font-size: 1.25rem;
+    font-size: 1.5rem;
   }
 
   .settings-content .q-avatar {
     width: 3rem;
     height: 3rem;
     font-size: 1.25rem;
-  }
-
-  .col.scroll.bg-white.q-pa-lg {
-    padding: 1rem;
   }
 }
 </style>

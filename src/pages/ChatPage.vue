@@ -263,12 +263,13 @@ const channelTypeOptions = [
   { label: 'Private channel - invitation only', value: 'private' }
 ]
 
+const isMobile = computed(() => $q.screen.lt.sm)
+
 const currentChannel = computed(() => chatStore.textChannels.find(channel => channel.id === chatStore.activeChannel))
 const currentChannelName = computed(() => currentChannel.value?.name || 'general')
 const typingUser = computed(() => (chatStore.activeChannel === 'random' ? 'Alex' : ''))
 const members = computed(() => chatStore.getMembers(userStore))
 const sortedChannels = computed(() => chatStore.sortedChannels)
-const isMobile = computed(() => $q.screen.lt.md)
 
 function ensureStartIndex(channelId) {
   if (startIndexes.value[channelId] !== undefined) return
@@ -344,12 +345,20 @@ watch(
   { immediate: true }
 )
 watch(
+  isMobile,
+  mobile => {
+    if (!mobile) showChannels.value = true
+  },
+  { immediate: true }
+)
+watch(
   [isMobile, showChannels],
   ([mobile, channelsVisible]) => {
     chatStore.workspaceRailVisible = !mobile || channelsVisible
   },
   { immediate: true }
 )
+
 onMounted(() => {
   scrollToBottom()
 })
@@ -431,7 +440,7 @@ function deleteChannel() {
   width: 22.5rem;
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 600px) {
   .channels-sidebar {
     width: 100%;
     min-width: 0;
