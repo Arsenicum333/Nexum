@@ -18,7 +18,14 @@
       </q-toolbar>
     </q-header>
 
-    <q-drawer v-model="leftDrawerOpen" show-if-above bordered :width="80">
+    <q-drawer
+      :model-value="workspaceRailVisible"
+      @update:model-value="workspaceRailVisible = $event"
+      show-if-above
+      bordered
+      :width="workspaceRailWidth"
+      :breakpoint="0"
+    >
       <div class="column full-height">
         <q-list>
           <q-item
@@ -88,12 +95,26 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed } from 'vue'
+import { useQuasar } from 'quasar'
+import { useRoute, useRouter } from 'vue-router'
 import CommandBar from '@/components/CommandBar.vue'
+import { chatStore } from '@/store/chatStore'
 
 const router = useRouter()
-const leftDrawerOpen = ref(false)
+const $q = useQuasar()
+const route = useRoute()
+const workspaceRailWidth = computed(() => ($q.screen.lt.md ? 56 : 80))
+const workspaceRailVisible = computed({
+  get() {
+    if (!$q.screen.lt.md) return true
+    if (route.path.startsWith('/account/edit')) return false
+    return chatStore.workspaceRailVisible
+  },
+  set(value) {
+    chatStore.workspaceRailVisible = value
+  }
+})
 
 function goBack() {
   const previousRoute = window.history.state?.back

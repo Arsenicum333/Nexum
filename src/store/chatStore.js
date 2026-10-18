@@ -17,6 +17,7 @@ const generalHistory = Array.from({ length: 60 }, (_, index) => {
 export const chatStore = reactive({
   activeChannel: 'gen',
   membersDialogOpen: false,
+  workspaceRailVisible: true,
 
   textChannels: [
     { id: 'gen', name: 'general', private: false, unread: 0, owner: 'me' },

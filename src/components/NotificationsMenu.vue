@@ -11,8 +11,13 @@
       {{ unreadCount }}
     </q-badge>
 
-    <q-menu anchor="bottom right" self="top right" :offset="[0, 8]">
-      <q-card flat style="width: 340px; max-width: 90vw">
+    <q-menu
+      :anchor="isMobile ? 'bottom middle' : 'bottom right'"
+      :self="isMobile ? 'top middle' : 'top right'"
+      :offset="[0, 8]"
+      content-class="notifications-menu"
+    >
+      <q-card flat class="notifications-card">
         <q-card-section class="row items-center no-wrap q-py-sm">
           <div class="text-subtitle1 text-weight-bold">Notifications</div>
           <q-space />
@@ -37,8 +42,13 @@
           >
             <q-tooltip>Notification settings</q-tooltip>
 
-            <q-menu anchor="bottom right" self="top right" :offset="[0, 4]">
-              <q-list dense padding style="min-width: 220px">
+            <q-menu
+              :anchor="isMobile ? 'bottom middle' : 'bottom right'"
+              :self="isMobile ? 'top middle' : 'top right'"
+              :offset="[0, 4]"
+              content-class="notification-settings-menu"
+            >
+              <q-list dense padding>
                 <div
                   class="q-px-md q-pb-xs text-uppercase text-weight-bolder text-caption text-grey-7"
                 >
@@ -84,7 +94,7 @@
             @click="item.read = true"
           >
             <q-item-section avatar>
-              <q-avatar color="primary" text-color="white" size="40px">
+              <q-avatar color="primary" text-color="white" size="2.5rem">
                 <q-icon :name="item.icon" />
               </q-avatar>
             </q-item-section>
@@ -101,7 +111,7 @@
               <q-icon
                 v-if="!item.read"
                 name="circle"
-                size="10px"
+                size="0.625rem"
                 color="primary"
                 class="q-mt-xs"
               />
@@ -112,7 +122,7 @@
         <div v-else class="column items-center text-grey-6 q-pa-lg">
           <q-icon
             :name="isOff ? 'notifications_off' : 'notifications_none'"
-            size="40px"
+            size="2.5rem"
           />
           <div class="q-mt-sm">
             {{ isOff ? 'Notifications are off' : 'No notifications' }}
@@ -140,7 +150,11 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import { useQuasar } from 'quasar'
 import { userStore } from '@/store/userStore'
+
+const $q = useQuasar()
+const isMobile = computed(() => $q.screen.lt.md)
 
 const modes = [
   { value: 'all', label: 'All notifications', icon: 'notifications' },
@@ -191,3 +205,28 @@ function markAllRead() {
   })
 }
 </script>
+
+<style scoped>
+.notifications-card {
+  width: 21.25rem;
+  max-width: calc(100vw - 1.5rem);
+}
+
+@media (max-width: 600px) {
+  .notifications-card :deep(.q-card__section) {
+    padding: 0.625rem;
+  }
+
+  .notifications-card :deep(.q-btn) {
+    font-size: 0.75rem;
+  }
+}
+
+:global(.notification-settings-menu) {
+  max-width: calc(100vw - 1.5rem);
+}
+
+:global(.notification-settings-menu .q-list) {
+  min-width: min(13.75rem, calc(100vw - 1.5rem));
+}
+</style>

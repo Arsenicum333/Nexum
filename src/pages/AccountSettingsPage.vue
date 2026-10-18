@@ -26,7 +26,7 @@
 
         <div class="row items-center q-mb-lg">
           <q-avatar
-            size="64px"
+            size="4rem"
             color="primary"
             text-color="white"
             class="q-mr-md"
@@ -131,8 +131,7 @@ function onSubmit() {
 
 <style scoped>
 .settings-sidebar {
-  width: 240px;
-  min-width: 240px;
+  width: 15rem;
   border-right: 1px solid #e0e0e0;
 }
 
@@ -141,6 +140,55 @@ function onSubmit() {
 }
 
 .settings-content {
-  max-width: 600px;
+  max-width: 37.5rem;
+}
+
+@media (max-width: 1024px) {
+  .settings-sidebar {
+    width: 100%;
+    min-width: 0;
+    height: auto;
+    flex: 0 0 auto;
+    border-right: 0;
+    border-bottom: 1px solid #e0e0e0;
+  }
+
+  .settings-sidebar > div:first-child {
+    padding: 0.75rem 1rem;
+    font-size: 0.9rem;
+  }
+
+  .settings-sidebar > .q-list {
+    display: flex;
+    padding: 0.25rem 0.5rem;
+  }
+
+  .settings-sidebar .q-item {
+    min-height: 2.5rem;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+
+  .settings-sidebar .q-item-section {
+    font-size: 0.875rem;
+  }
+
+  .settings-content {
+    max-width: none;
+  }
+
+  .settings-content > .text-h5 {
+    font-size: 1.25rem;
+  }
+
+  .settings-content .q-avatar {
+    width: 3rem;
+    height: 3rem;
+    font-size: 1.25rem;
+  }
+
+  .col.scroll.bg-white.q-pa-lg {
+    padding: 1rem;
+  }
 }
 </style>

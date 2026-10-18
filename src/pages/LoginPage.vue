@@ -1,13 +1,13 @@
 <template>
   <q-page class="flex flex-center bg-grey-2">
-    <q-card class="q-pa-md" style="width: 400px; max-width: 90vw">
-      <q-card-section>
-        <div class="text-h5 text-weight-bold">Nexum</div>
+    <q-card class="auth-card q-pa-sm q-pa-md-md">
+      <q-card-section class="q-pb-none">
+        <div class="text-h5 text-weight-bold auth-title">Nexum</div>
         <div class="text-subtitle2 text-grey-7">Sign in</div>
       </q-card-section>
 
       <q-form @submit="onSubmit">
-        <q-card-section class="q-gutter-md">
+        <q-card-section class="q-gutter-sm q-gutter-md-md">
           <q-input
             v-model="email"
             outlined
@@ -33,7 +33,7 @@
           </q-input>
         </q-card-section>
 
-        <q-card-actions class="q-px-md q-pb-md column">
+        <q-card-actions class="q-px-sm q-px-md-md q-pb-sm q-pb-md-md column">
           <q-btn
             type="submit"
             color="primary"
@@ -79,3 +79,22 @@ function routeTarget() {
   return router.currentRoute.value.query.redirect || '/chat/general'
 }
 </script>
+
+<style scoped>
+.auth-card {
+  width: 25rem;
+  max-width: 90vw;
+}
+
+@media (max-width: 599px) {
+  .auth-card {
+    width: calc(100vw - 1.5rem);
+    max-width: calc(100vw - 1.5rem);
+  }
+
+  .auth-title {
+    font-size: 1.25rem;
+    line-height: 1.3;
+  }
+}
+</style>

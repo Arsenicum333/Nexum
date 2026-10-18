@@ -1,11 +1,26 @@
 <template>
   <q-page class="flex row no-wrap fit">
-    <div class="channels-sidebar bg-grey-2 column">
+    <div
+      class="channels-sidebar bg-grey-2 column"
+      :class="{ 'mobile-pane-hidden': isMobile && !showChannels }"
+    >
       <div
         class="q-pa-md text-weight-bold text-subtitle1 row items-center justify-between border-bottom"
       >
         <span class="ellipsis">Some Workspace</span>
-        <q-btn flat round dense icon="expand_more" size="sm" />
+        <div class="row items-center">
+          <q-btn flat round dense icon="expand_more" size="sm" />
+          <q-btn
+            v-if="isMobile"
+            flat
+            round
+            dense
+            icon="chat"
+            size="sm"
+            aria-label="Open chat"
+            @click="showChannels = false"
+          />
+        </div>
       </div>
 
       <q-scroll-area class="col">
@@ -58,7 +73,7 @@
                 text-color="white"
                 label="!"
                 class="text-weight-bold"
-                style="padding: 3px 8px"
+                style="padding: 0.25rem 0.5rem"
               />
             </q-item-section>
             <q-item-section side v-else-if="channel.unread">
@@ -69,9 +84,22 @@
       </q-scroll-area>
     </div>
 
-    <div class="col column bg-white">
+    <div
+      class="chat-pane col column bg-white"
+      :class="{ 'mobile-pane-hidden': isMobile && showChannels }"
+    >
       <div class="q-px-md q-py-sm border-bottom row items-center justify-between">
         <div class="row items-center">
+          <q-btn
+            v-if="isMobile"
+            flat
+            round
+            dense
+            icon="arrow_back"
+            aria-label="Open channels"
+            class="q-mr-sm"
+            @click="showChannels = true"
+          />
           <q-icon
             :name="currentChannel?.private ? 'lock' : 'tag'"
             size="sm"
@@ -94,7 +122,7 @@
           <q-btn flat round dense icon="more_vert" color="grey-7">
             <q-tooltip>Channel options</q-tooltip>
             <q-menu anchor="bottom right" self="top right">
-              <q-list dense style="min-width: 180px">
+              <q-list dense style="min-width: 11.25rem">
                 <q-item clickable v-close-popup @click="leaveChannel">
                   <q-item-section avatar><q-icon name="logout" /></q-item-section>
                   <q-item-section>Leave channel</q-item-section>
@@ -116,8 +144,8 @@
       </div>
 
       <q-scroll-area ref="scrollArea" class="col q-pa-md" @scroll="onScroll">
-        <div class="row justify-center items-center text-caption text-grey-6" style="min-height: 32px">
-          <q-spinner-dots v-if="loadingMore" size="24px" color="primary" />
+        <div class="row justify-center items-center text-caption text-grey-6" style="min-height: 2rem">
+          <q-spinner-dots v-if="loadingMore" size="1.5rem" color="primary" />
           <span v-else-if="!hasMore">Beginning of #{{ currentChannelName }}</span>
         </div>
 
@@ -129,7 +157,7 @@
           :style="{ borderLeft: isMentioned(msg) ? '3px solid #ff9800' : '3px solid transparent' }"
         >
           <div class="row items-center q-mb-xs">
-            <q-avatar size="28px" color="amber-8" text-color="white" class="q-mr-sm">
+            <q-avatar size="1.75rem" color="amber-8" text-color="white" class="q-mr-sm">
               {{ authorName(msg)[0] }}
             </q-avatar>
             <span class="text-weight-bold q-mr-sm">{{ authorName(msg) }}</span>
@@ -153,7 +181,7 @@
         class="q-px-md q-py-xs text-caption text-grey-7"
       >
         <span class="row items-center no-wrap">
-          <q-spinner-dots size="20px" color="grey-7" class="q-mr-xs" />
+          <q-spinner-dots size="1.25rem" color="grey-7" class="q-mr-xs" />
           <b>{{ typingUser }}</b>&nbsp;is typing...
         </span>
       </div>
@@ -161,7 +189,7 @@
     </div>
 
     <q-dialog v-model="createChannelDialog">
-      <q-card style="width: 420px; max-width: 90vw">
+      <q-card class="chat-dialog create-channel-dialog">
         <q-card-section class="row items-center justify-between">
           <div class="text-h6">Create channel</div>
           <q-btn v-close-popup flat round dense icon="close" />
@@ -180,7 +208,7 @@
     </q-dialog>
 
     <q-dialog v-model="chatStore.membersDialogOpen">
-      <q-card style="width: 360px; max-width: 90vw">
+      <q-card class="chat-dialog members-dialog">
         <q-card-section class="row items-center justify-between">
           <div>
             <div class="text-h6">Channel members</div>
@@ -212,6 +240,7 @@
 
 <script setup>
 import { ref, computed, watch, nextTick, onMounted } from 'vue'
+import { useQuasar } from 'quasar'
 import { useRoute, useRouter } from 'vue-router'
 import { userStore } from '@/store/userStore'
 import { chatStore } from '@/store/chatStore'
@@ -219,7 +248,9 @@ import NotificationsMenu from '@/components/NotificationsMenu.vue'
 
 const route = useRoute()
 const router = useRouter()
+const $q = useQuasar()
 const createChannelDialog = ref(false)
+const showChannels = ref(true)
 const newChannelName = ref('')
 const newChannelType = ref('public')
 const scrollArea = ref(null)
@@ -237,6 +268,7 @@ const currentChannelName = computed(() => currentChannel.value?.name || 'general
 const typingUser = computed(() => (chatStore.activeChannel === 'random' ? 'Alex' : ''))
 const members = computed(() => chatStore.getMembers(userStore))
 const sortedChannels = computed(() => chatStore.sortedChannels)
+const isMobile = computed(() => $q.screen.lt.md)
 
 function ensureStartIndex(channelId) {
   if (startIndexes.value[channelId] !== undefined) return
@@ -261,6 +293,7 @@ function syncChannelFromRoute(channelName) {
 function selectChannel(channel) {
   chatStore.activeChannel = channel.id
   router.push(`/chat/${channel.name}`)
+  if (isMobile.value) showChannels.value = false
 }
 
 function getScrollElement() {
@@ -307,6 +340,13 @@ watch(
   channelId => {
     ensureStartIndex(channelId)
     scrollToBottom()
+  },
+  { immediate: true }
+)
+watch(
+  [isMobile, showChannels],
+  ([mobile, channelsVisible]) => {
+    chatStore.workspaceRailVisible = !mobile || channelsVisible
   },
   { immediate: true }
 )
@@ -365,8 +405,8 @@ function deleteChannel() {
 
 <style scoped>
 .channels-sidebar {
-  width: 240px;
-  min-width: 240px;
+  width: 15rem;
+  min-width: 15rem;
   border-right: 1px solid #e0e0e0;
 }
 
@@ -382,4 +422,49 @@ function deleteChannel() {
   border-top: 1px solid #e0e0e0;
 }
 
+.chat-dialog {
+  width: 26.25rem;
+  max-width: calc(100vw - 1.5rem);
+}
+
+.members-dialog {
+  width: 22.5rem;
+}
+
+@media (max-width: 1024px) {
+  .channels-sidebar {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .mobile-pane-hidden {
+    display: none !important;
+  }
+
+  .chat-pane :deep(.q-px-md) {
+    padding-left: 0.625rem;
+    padding-right: 0.625rem;
+  }
+
+  .chat-pane :deep(.q-pa-md) {
+    padding: 0.625rem;
+  }
+
+  .chat-pane .text-subtitle1 {
+    font-size: 0.95rem;
+  }
+
+  .channels-sidebar :deep(.q-pa-md) {
+    padding: 0.625rem;
+  }
+
+  .channels-sidebar :deep(.q-list--padding) {
+    padding: 0.5rem;
+  }
+
+  .chat-dialog :deep(.q-card__section),
+  .chat-dialog :deep(.q-card__actions) {
+    padding: 0.75rem;
+  }
+}
 </style>
