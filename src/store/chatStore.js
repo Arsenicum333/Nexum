@@ -17,6 +17,8 @@ const generalHistory = Array.from({ length: 60 }, (_, index) => {
 export const chatStore = reactive({
   activeChannel: 'gen',
   membersDialogOpen: false,
+  workspaceRailVisible: true,
+  workspaces: [],
 
   textChannels: [
     { id: 'gen', name: 'general', private: false, unread: 0, owner: 'me' },
@@ -77,7 +79,8 @@ export const chatStore = reactive({
 
   get sortedChannels() {
     return [...this.textChannels].sort(
-      (first, second) => Number(Boolean(second.invited)) - Number(Boolean(first.invited))
+      (first, second) =>
+        Number(Boolean(second.invited)) - Number(Boolean(first.invited))
     )
   },
 
@@ -111,6 +114,12 @@ export const chatStore = reactive({
         minute: '2-digit'
       })
     })
+  },
+
+  createWorkspace(name) {
+    const workspace = { id: `workspace-${Date.now()}`, name }
+    this.workspaces.push(workspace)
+    return workspace
   },
 
   createChannel(name, isPrivate) {

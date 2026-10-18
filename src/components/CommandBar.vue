@@ -23,7 +23,7 @@
         >
           <q-item-section avatar class="min-width-auto q-pr-sm">
             <q-avatar
-              size="24px"
+              size="1.5rem"
               :color="member.status === 'online' ? 'positive' : 'grey-6'"
               text-color="white"
             >
@@ -42,7 +42,7 @@
       outlined
       autofocus
       :placeholder="inputPlaceholder"
-      class="command-input col q-ml-md"
+      class="command-input col q-ml-sm q-ml-md-md"
       @keyup.enter="onEnter"
     >
       <template #prepend>
@@ -205,10 +205,26 @@ function runCommand(value) {
 }
 
 .mention-menu {
-  left: 95px;
-  right: 16px;
+  left: 6rem;
+  right: 1rem;
   bottom: 100%;
   z-index: 10;
-  margin-bottom: 4px;
+  margin-bottom: 0.25;
+}
+
+@media (max-width: 1024px) {
+  .command-bar {
+    padding-right: 0.5rem;
+  }
+
+  .account-slot {
+    width: 55px;
+    flex-basis: 55px;
+  }
+
+  .mention-menu {
+    left: 4rem;
+    right: 0.5rem;
+  }
 }
 </style>

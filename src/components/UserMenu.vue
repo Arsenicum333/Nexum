@@ -18,10 +18,10 @@
     <q-tooltip>Account</q-tooltip>
 
     <q-menu anchor="bottom right" self="bottom left" :offset="[10, 0]">
-      <q-card flat style="width: 280px">
+      <q-card flat class="account-menu-card">
         <q-card-section class="row items-center no-wrap">
           <div class="avatar-wrapper q-mr-md">
-            <q-avatar color="primary" text-color="white" size="48px">
+            <q-avatar color="primary" text-color="white" size="3rem">
               {{ userStore.shownName[0]?.toUpperCase() }}
             </q-avatar>
             <span class="status-dot" :class="`bg-${currentStatus.color}`" />
@@ -129,15 +129,25 @@ function logout() {
 
 .status-dot {
   position: absolute;
-  right: -4px;
-  bottom: -4px;
-  width: 14px;
-  height: 14px;
+  right: -0.25rem;
+  bottom: -0.25rem;
+  width: 0.875;
+  height: 0.875rem;
   border-radius: 50%;
   border: 2px solid #fff;
 }
 
 .min-width-auto {
   min-width: auto;
+}
+
+.account-menu-card {
+  width: 16rem;
+}
+
+@media (max-width: 1024px) {
+  .account-menu-card {
+    width: min(16rem, calc(100vw - 5rem));
+  }
 }
 </style>

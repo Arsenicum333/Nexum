@@ -1,14 +1,14 @@
 <template>
-  <q-page class="flex flex-center bg-grey-2 q-pa-md">
-    <q-card class="q-pa-md" style="width: 520px; max-width: 100%">
-      <q-card-section>
-        <div class="text-h5 text-weight-bold">Nexum</div>
+  <q-page class="flex flex-center bg-grey-2 q-pa-sm q-pa-md-md">
+    <q-card class="auth-card q-pa-sm q-pa-md-md">
+      <q-card-section class="q-pb-none">
+        <div class="text-h5 text-weight-bold auth-title">Nexum</div>
         <div class="text-subtitle2 text-grey-7">Create an account</div>
       </q-card-section>
 
       <q-form @submit="onSubmit">
         <q-card-section>
-          <div class="row q-col-gutter-md">
+          <div class="row q-col-gutter-sm q-col-gutter-md-md">
             <div class="col-12 col-sm-6">
               <q-input
                 v-model="firstName"
@@ -73,7 +73,7 @@
           </div>
         </q-card-section>
 
-        <q-card-actions class="q-px-md q-pb-md column">
+        <q-card-actions class="q-px-sm q-px-md-md q-pb-sm q-pb-md-md column">
           <q-btn
             type="submit"
             color="primary"
@@ -118,3 +118,22 @@ function onSubmit() {
   router.push('/chat/general')
 }
 </script>
+
+<style scoped>
+.auth-card {
+  width: 32.5rem;
+  max-width: 100%;
+}
+
+@media (max-width: 599px) {
+  .auth-card {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .auth-title {
+    font-size: 1.25rem;
+    line-height: 1.3;
+  }
+}
+</style>
