@@ -131,7 +131,7 @@ function logout() {
   position: absolute;
   right: -0.25rem;
   bottom: -0.25rem;
-  width: 0.875;
+  width: 0.875rem;
   height: 0.875rem;
   border-radius: 50%;
   border: 2px solid #fff;
