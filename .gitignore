@@ -1,26 +1,47 @@
+# OS files
 .DS_Store
+Thumbs.db
 .thumbs.db
-node_modules
 
-# .env files
-.env*
+# Dependencies
+node_modules/
 
-# Quasar core related directories
-.quasar
-/dist
-/quasar.config.*.temporary.compiled*
+# Environment files and secrets
+.env
+.env.*
+!.env.example
 
-# Cordova related directories and files
-/src-cordova/node_modules
-/src-cordova/platforms
-/src-cordova/plugins
-/src-cordova/www
+# Quasar (frontend)
+/frontend/.quasar/
+/frontend/dist/
+/frontend/quasar.config.*.temporary.compiled*
 
-# Capacitor related directories and files
-/src-capacitor/www
-/src-capacitor/node_modules
+# AdonisJS (backend)
+/backend/.adonisjs/
+/backend/build/
+/backend/tmp/*
+!/backend/tmp/.gitkeep
+/backend/public/assets/
 
-# Log files
+# Cordova
+/src-cordova/node_modules/
+/src-cordova/platforms/
+/src-cordova/plugins/
+/src-cordova/www/
+
+# Capacitor
+/src-capacitor/www/
+/src-capacitor/node_modules/
+
+# Logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
+
+# Editors
+.fleet/
+.idea/
+
+# Temporary files
+*.tmp

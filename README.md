@@ -1,26 +1,37 @@
 # Nexum [In Progress]
-Chat platform that you never asked, but always wanted
+Chat platform that you never asked, but always wanted.
 
 # Project Setup [For Dev]
 
 ## Prerequisites
-- Node.js (v18+)
+- Node.js (v24+ recommended)
 
 ## Setup & Run
 
-1. **Install dependencies:**
-   ```bash
-   npm install
-   ```
+**Frontend (Quasar):**
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
-2. **Start Dev Server:**
-   ```bash
-   npm run dev
-   # or
-   quasar dev
-   ```
+**Backend (AdonisJS):**
+```bash
+cd backend
+npm install
+npm run dev
+```
 
 ## Build
+
+**Frontend:**
 ```bash
+cd frontend
+npm run build
+```
+
+**Backend:**
+```bash
+cd backend
 npm run build
 ```

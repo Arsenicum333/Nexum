@@ -1,7 +1,20 @@
-[*.{js,jsx,mjs,cjs,ts,tsx,mts,cts,vue}]
+[*]
 charset = utf-8
-indent_size = 2
 indent_style = space
+indent_size = 2
 end_of_line = lf
 insert_final_newline = true
 trim_trailing_whitespace = true
+
+[*.json]
+insert_final_newline = unset
+
+[*.md]
+trim_trailing_whitespace = false
+
+[**.min.js]
+indent_style = unset
+insert_final_newline = unset
+
+[Makefile]
+indent_style = space
