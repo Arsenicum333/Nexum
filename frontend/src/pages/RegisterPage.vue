@@ -28,7 +28,7 @@
 
             <div class="col-12">
               <q-input
-                v-model="nickName"
+                v-model="username"
                 outlined
                 label="Nickname"
                 prefix="@"
@@ -57,7 +57,7 @@
                 type="password"
                 label="Password"
                 :rules="[
-                  val => (val && val.length >= 6) || 'At least 6 characters'
+                  val => (val && val.length >= 8) || 'At least 8 characters'
                 ]"
               />
             </div>
@@ -80,6 +80,8 @@
             label="Sign up"
             no-caps
             class="full-width"
+            :loading="isSubmitting"
+            :disable="isSubmitting"
           />
           <div class="q-mt-sm row items-center justify-center q-gutter-xs">
             <span>Already have an account?</span>
@@ -102,20 +104,41 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useQuasar } from 'quasar'
 import { userStore } from '@/store/userStore'
+import { authApi } from '@/services/authApi'
 
 const router = useRouter()
+const $q = useQuasar()
 
 const firstName = ref('')
 const lastName = ref('')
-const nickName = ref('')
+const username = ref('')
 const email = ref('')
 const password = ref('')
 const passwordRepeat = ref('')
+const isSubmitting = ref(false)
 
-function onSubmit() {
-  userStore.setAuthenticated(true)
-  router.push('/chat/general')
+async function onSubmit() {
+  isSubmitting.value = true
+  try {
+    userStore.update(
+      await authApi.register({
+        firstName: firstName.value.trim(),
+        lastName: lastName.value.trim(),
+        username: username.value.trim(),
+        email: email.value.trim(),
+        password: password.value,
+        passwordConfirmation: passwordRepeat.value
+      })
+    )
+    userStore.setAuthenticated(true)
+    await router.push('/chat/general')
+  } catch (error) {
+    $q.notify({ type: 'negative', message: error.message })
+  } finally {
+    isSubmitting.value = false
+  }
 }
 </script>
 

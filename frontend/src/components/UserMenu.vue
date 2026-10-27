@@ -102,6 +102,7 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { userStore } from '@/store/userStore'
+import { authApi } from '@/services/authApi'
 
 const router = useRouter()
 
@@ -115,8 +116,9 @@ const currentStatus = computed(() =>
   statuses.find(status => status.value === userStore.status)
 )
 
-function logout() {
-  userStore.setAuthenticated(false)
+async function logout() {
+  await authApi.logout()
+  userStore.clear()
   router.push('/auth/login')
 }
 </script>

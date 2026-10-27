@@ -40,6 +40,8 @@
             label="Sign in"
             no-caps
             class="full-width"
+            :loading="isSubmitting"
+            :disable="isSubmitting"
           />
           <div class="q-mt-sm row items-center justify-center q-gutter-xs">
             <span>Don't have an account?</span>
@@ -62,17 +64,31 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useQuasar } from 'quasar'
 import { userStore } from '@/store/userStore'
+import { authApi } from '@/services/authApi'
 
 const router = useRouter()
+const $q = useQuasar()
 
 const email = ref('')
 const password = ref('')
 const showPassword = ref(false)
+const isSubmitting = ref(false)
 
-function onSubmit() {
-  userStore.setAuthenticated(true)
-  router.push(routeTarget())
+async function onSubmit() {
+  isSubmitting.value = true
+  try {
+    userStore.update(
+      await authApi.login({ email: email.value, password: password.value })
+    )
+    userStore.setAuthenticated(true)
+    await router.push(routeTarget())
+  } catch (error) {
+    $q.notify({ type: 'negative', message: error.message })
+  } finally {
+    isSubmitting.value = false
+  }
 }
 
 function routeTarget() {

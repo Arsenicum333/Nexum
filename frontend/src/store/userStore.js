@@ -10,7 +10,7 @@ export const userStore = reactive({
   notificationMode: 'all',
   authenticated:
     typeof window !== 'undefined' &&
-    localStorage.getItem('nexum:authenticated') === 'true',
+    Boolean(localStorage.getItem('nexum:access-token')),
 
   get shownName() {
     return this.displayName.trim() || this.username
@@ -24,7 +24,15 @@ export const userStore = reactive({
     this.authenticated = value
     if (typeof window === 'undefined') return
 
-    if (value) localStorage.setItem('nexum:authenticated', 'true')
-    else localStorage.removeItem('nexum:authenticated')
+    if (!value) localStorage.removeItem('nexum:access-token')
+  },
+
+  clear() {
+    this.firstName = ''
+    this.lastName = ''
+    this.email = ''
+    this.username = ''
+    this.displayName = ''
+    this.authenticated = false
   }
 })

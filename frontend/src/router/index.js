@@ -7,6 +7,8 @@ import {
 } from 'vue-router'
 
 import routes from './routes.js'
+import { authApi } from '@/services/authApi'
+import { userStore } from '@/store/userStore'
 
 /*
  * If not building with SSR mode, you can
@@ -32,6 +34,30 @@ export default defineRouter((/* { store, ssrContext } */) => {
     // quasar.conf.js -> build -> vueRouterMode
     // quasar.conf.js -> build -> publicPath
     history: createHistory(import.meta.env.QUASAR_VUE_ROUTER_BASE)
+  })
+
+  Router.beforeEach(async to => {
+    const isAuthRoute = to.path.startsWith('/auth/')
+
+    if (!authApi.hasSession()) {
+      userStore.clear()
+      return isAuthRoute
+        ? true
+        : { path: '/auth/login', query: { redirect: to.fullPath } }
+    }
+
+    if (isAuthRoute) return { path: '/chat/general' }
+    if (!userStore.authenticated) {
+      try {
+        userStore.update(await authApi.profile())
+        userStore.setAuthenticated(true)
+      } catch {
+        userStore.clear()
+        return { path: '/auth/login', query: { redirect: to.fullPath } }
+      }
+    }
+
+    return true
   })
 
   Router.afterEach(to => {
