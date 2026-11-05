@@ -2,6 +2,11 @@
 // https://v2.quasar.dev/quasar-cli-vite/quasar-config-file
 
 import { defineConfig } from '#q-app'
+import { resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const repositoryRoot = fileURLToPath(new URL('../', import.meta.url))
+const frontendRoot = fileURLToPath(new URL('.', import.meta.url))
 
 export default defineConfig((/* ctx */) => {
   return {
@@ -39,7 +44,7 @@ export default defineConfig((/* ctx */) => {
       // https://v2.quasar.dev/quasar-cli-vite/page-routing-with-vue-router#filename-based-routing
       // filenameBasedRouting: true,
 
-      vueRouterMode: 'hash' // available values: 'hash', 'history'
+      vueRouterMode: 'hash', // available values: 'hash', 'history'
       // vueRouterBase,
 
       // publicPath: '/',
@@ -48,6 +53,26 @@ export default defineConfig((/* ctx */) => {
       // ignorePublicFolder: true,
       // minify: false,
       // distDir
+      extendViteConf(viteConf) {
+        viteConf.server = {
+          ...viteConf.server,
+          fs: {
+            ...viteConf.server?.fs,
+            allow: [
+              ...(viteConf.server?.fs?.allow || []),
+              frontendRoot,
+              resolve(
+                repositoryRoot,
+                'node_modules/@quasar/extras/exports/roboto-font'
+              ),
+              resolve(
+                repositoryRoot,
+                'node_modules/@quasar/extras/exports/material-icons'
+              )
+            ]
+          }
+        }
+      }
 
       // extendViteConf (viteConf) {},
       // viteVuePluginOptions: {},

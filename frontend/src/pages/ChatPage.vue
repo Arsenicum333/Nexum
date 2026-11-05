@@ -62,21 +62,32 @@
                 ? 'box-shadow: 0 0 10px rgba(255, 152, 0, 0.6)'
                 : ''
             "
-            @click="selectChannel(channel)"
+            @click="openChannel(channel)"
           >
             <q-item-section avatar class="min-width-auto q-pr-sm">
               <q-icon :name="channel.private ? 'lock' : 'tag'" size="xs" />
             </q-item-section>
             <q-item-section class="ellipsis">{{ channel.name }}</q-item-section>
             <q-item-section side v-if="channel.invited">
-              <q-badge
-                rounded
-                color="orange-10"
-                text-color="white"
-                label="!"
-                class="text-weight-bold"
-                style="padding: 0.25rem 0.5rem"
-              />
+              <div class="row items-center no-wrap">
+                <q-badge
+                  rounded
+                  color="orange-10"
+                  text-color="white"
+                  label="!"
+                  class="text-weight-bold q-mr-xs"
+                  style="padding: 0.25rem 0.5rem"
+                />
+                <q-btn
+                  flat
+                  round
+                  dense
+                  size="sm"
+                  icon="close"
+                  aria-label="Decline invitation"
+                  @click.stop="declineInvitation(channel)"
+                />
+              </div>
             </q-item-section>
             <q-item-section side v-else-if="channel.unread">
               <q-badge rounded color="primary" :label="channel.unread" />
@@ -110,7 +121,7 @@
             class="q-mr-xs text-grey-7"
           />
           <span class="text-weight-bold text-subtitle1">{{
-            currentChannelName
+            currentChannel ? currentChannelName : 'No channel selected'
           }}</span>
         </div>
         <div>
@@ -129,7 +140,12 @@
             <q-tooltip>Channel options</q-tooltip>
             <q-menu anchor="bottom right" self="top right">
               <q-list dense style="min-width: 11.25rem">
-                <q-item clickable v-close-popup @click="leaveChannel">
+                <q-item
+                  clickable
+                  v-close-popup
+                  :disable="!currentChannel || currentChannel.invited"
+                  @click="leaveChannel"
+                >
                   <q-item-section avatar
                     ><q-icon name="logout"
                   /></q-item-section>
@@ -139,7 +155,7 @@
                 <q-item
                   clickable
                   v-close-popup
-                  :disable="currentChannel?.owner !== 'me'"
+                  :disable="!currentChannel || currentChannel.owner !== 'me'"
                   @click="deleteChannel"
                 >
                   <q-item-section avatar
@@ -157,6 +173,19 @@
 
       <q-scroll-area ref="scrollArea" class="col q-pa-md" @scroll="onScroll">
         <div
+          v-if="!currentChannel"
+          class="full-height flex flex-center column text-grey-7"
+        >
+          <div class="q-mb-md">You are not a member of any channels yet.</div>
+          <q-btn
+            color="primary"
+            icon="add"
+            label="Create a channel"
+            @click="openCreateChannelDialog"
+          />
+        </div>
+        <div
+          v-else
           class="row justify-center items-center text-caption text-grey-6"
           style="min-height: 2rem"
         >
@@ -167,6 +196,7 @@
         </div>
 
         <div
+          v-if="currentChannel"
           v-for="msg in currentMessages"
           :key="msg.id"
           class="q-mb-md q-pa-xs rounded-borders"
@@ -262,6 +292,29 @@
           <q-btn v-close-popup flat round dense icon="close" />
         </q-card-section>
         <q-list separator>
+          <q-item class="q-py-md">
+            <q-item-section>
+              <q-input
+                v-model="inviteUsername"
+                dense
+                outlined
+                label="Invite by username"
+                @keyup.enter="inviteMember"
+              />
+            </q-item-section>
+            <q-item-section side>
+              <q-btn
+                round
+                flat
+                dense
+                icon="person_add"
+                aria-label="Invite member"
+                :loading="inviteSubmitting"
+                :disable="!inviteUsername.trim() || !currentChannel"
+                @click="inviteMember"
+              />
+            </q-item-section>
+          </q-item>
           <q-item v-for="member in members" :key="member.id">
             <q-item-section avatar>
               <q-avatar
@@ -307,6 +360,8 @@ const createChannelDialog = ref(false)
 const showChannels = ref(true)
 const newChannelName = ref('')
 const newChannelType = ref('public')
+const inviteUsername = ref('')
+const inviteSubmitting = ref(false)
 const scrollArea = ref(null)
 const loadingMore = ref(false)
 const pageSize = 20
@@ -363,6 +418,14 @@ function selectChannel(channel) {
   if (isMobile.value) showChannels.value = false
 }
 
+async function openChannel(channel) {
+  if (channel.invited) {
+    await acceptInvitation(channel)
+    return
+  }
+  selectChannel(channel)
+}
+
 function getScrollElement() {
   return scrollArea.value?.getScrollTarget()
 }
@@ -409,6 +472,21 @@ watch(
   () => chatStore.activeChannel,
   channelId => {
     ensureStartIndex(channelId)
+    if (channelId) {
+      chatStore
+        .loadMessages(channelId)
+        .then(() => {
+          if (channelId !== chatStore.activeChannel) return
+          startIndexes.value[channelId] = Math.max(
+            0,
+            (chatStore.channelMessages[channelId] || []).length - pageSize
+          )
+          scrollToBottom()
+        })
+        .catch(error => {
+          $q.notify({ type: 'negative', message: error.message })
+        })
+    }
     scrollToBottom()
   },
   { immediate: true }
@@ -434,7 +512,19 @@ watch(
   { immediate: true }
 )
 
-onMounted(() => {
+onMounted(async () => {
+  try {
+    await chatStore.loadChannels()
+    syncChannelFromRoute(route.params.channelName)
+    const selectedChannel = chatStore.textChannels.find(
+      channel => channel.id === chatStore.activeChannel
+    )
+    if (selectedChannel && route.params.channelName !== selectedChannel.name) {
+      await router.replace(`/chat/${selectedChannel.name}`)
+    }
+  } catch (error) {
+    $q.notify({ type: 'negative', message: error.message })
+  }
   scrollToBottom()
 })
 
@@ -479,25 +569,72 @@ function openCreateChannelDialog() {
   createChannelDialog.value = true
 }
 
-function createChannel() {
+async function createChannel() {
   const name = newChannelName.value.trim().toLowerCase()
   if (channelNameRule(name) !== true) return
-  const channel = chatStore.createChannel(
-    name,
-    newChannelType.value === 'private'
-  )
-  router.push(`/chat/${channel.name}`)
-  createChannelDialog.value = false
+  try {
+    const channel = await chatStore.createChannel(
+      name,
+      newChannelType.value === 'private'
+    )
+    await router.push(`/chat/${channel.name}`)
+    createChannelDialog.value = false
+  } catch (error) {
+    $q.notify({ type: 'negative', message: error.message })
+  }
 }
 
-function leaveChannel() {
-  const channel = chatStore.removeActiveChannel()
-  if (channel) router.push(`/chat/${channel.name}`)
+async function leaveChannel() {
+  try {
+    const channel = await chatStore.leaveActiveChannel()
+    await router.push(channel ? `/chat/${channel.name}` : '/chat/general')
+  } catch (error) {
+    $q.notify({ type: 'negative', message: error.message })
+  }
 }
 
-function deleteChannel() {
-  const channel = chatStore.removeActiveChannel()
-  if (channel) router.push(`/chat/${channel.name}`)
+async function deleteChannel() {
+  try {
+    const channel = await chatStore.deleteActiveChannel()
+    await router.push(channel ? `/chat/${channel.name}` : '/chat/general')
+  } catch (error) {
+    $q.notify({ type: 'negative', message: error.message })
+  }
+}
+
+async function acceptInvitation(channel) {
+  try {
+    const accepted = await chatStore.acceptInvitation(channel)
+    if (accepted) {
+      await router.push(`/chat/${accepted.name}`)
+      if (isMobile.value) showChannels.value = false
+    }
+  } catch (error) {
+    $q.notify({ type: 'negative', message: error.message })
+  }
+}
+
+async function declineInvitation(channel) {
+  try {
+    await chatStore.declineInvitation(channel)
+  } catch (error) {
+    $q.notify({ type: 'negative', message: error.message })
+  }
+}
+
+async function inviteMember() {
+  const username = inviteUsername.value.trim()
+  if (!username) return
+  inviteSubmitting.value = true
+  try {
+    await chatStore.inviteMember(username)
+    inviteUsername.value = ''
+    $q.notify({ type: 'positive', message: `Invitation sent to @${username}` })
+  } catch (error) {
+    $q.notify({ type: 'negative', message: error.message })
+  } finally {
+    inviteSubmitting.value = false
+  }
 }
 </script>
 

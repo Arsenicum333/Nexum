@@ -1,87 +1,35 @@
 import { reactive } from 'vue'
-
-const generalHistory = Array.from({ length: 60 }, (_, index) => {
-  const minutes = 8 * 60 + index * 3
-  const hours = String(Math.floor(minutes / 60)).padStart(2, '0')
-  const minute = String(minutes % 60).padStart(2, '0')
-  const authors = ['Alex', 'Mariya', 'John']
-
-  return {
-    id: `general-history-${index + 1}`,
-    author: authors[index % authors.length],
-    text: `History message ${index + 1}: the Nexum team is discussing the next release.`,
-    time: `${hours}:${minute}`
-  }
-})
+import { channelsApi } from '@/services/channelsApi'
 
 export const chatStore = reactive({
-  activeChannel: 'gen',
+  activeChannel: '',
   membersDialogOpen: false,
   workspaceRailVisible: true,
   workspaces: [],
 
-  textChannels: [
-    { id: 'gen', name: 'general', private: false, unread: 0, owner: 'me' },
-    {
-      id: 'ann',
-      name: 'announcements',
-      private: false,
-      unread: 2,
-      owner: 'me'
-    },
-    { id: 'dev', name: 'developers', private: true, unread: 0, owner: 'me' },
-    { id: 'random', name: 'random', private: false, unread: 0, owner: 'me' },
-    {
-      id: 'design',
-      name: 'design-team',
-      private: true,
-      unread: 0,
-      owner: 'mariya',
-      invited: true
-    }
-  ],
+  textChannels: [],
 
-  channelMessages: {
-    gen: [
-      ...generalHistory,
-      {
-        id: 1,
-        author: 'Alex',
-        text: 'Welcome to Nexum General Chat!',
-        time: '12:30'
-      },
-      {
-        id: 2,
-        author: 'Mariya',
-        text: 'Hello everyone! How is the development going?',
-        time: '12:32'
-      }
-    ],
-    ann: [
-      {
-        id: 3,
-        author: 'Alex',
-        text: 'The first prototype review is on Friday.',
-        time: '09:15'
-      }
-    ],
-    dev: [
-      {
-        id: 4,
-        author: 'Mariya',
-        text: 'Private channel for the frontend team.',
-        time: '11:05'
-      }
-    ],
-    random: [],
-    design: []
-  },
+  channelMessages: {},
 
   get sortedChannels() {
     return [...this.textChannels].sort(
       (first, second) =>
-        Number(Boolean(second.invited)) - Number(Boolean(first.invited))
+        Number(Boolean(second.invited)) - Number(Boolean(first.invited)) ||
+        first.name.localeCompare(second.name)
     )
+  },
+
+  async loadChannels() {
+    this.textChannels = await channelsApi.list()
+    this.textChannels.forEach(channel => {
+      if (!this.channelMessages[channel.id])
+        this.channelMessages[channel.id] = []
+    })
+    if (!this.textChannels.some(channel => channel.id === this.activeChannel)) {
+      this.activeChannel =
+        this.textChannels.find(channel => !channel.invited)?.id || ''
+    }
+    return this.textChannels
   },
 
   getMembers(currentUser) {
@@ -101,19 +49,33 @@ export const chatStore = reactive({
     this.membersDialogOpen = true
   },
 
-  addMessage(text) {
+  async addMessage(text) {
     const messages = this.channelMessages[this.activeChannel]
     if (!messages || !text.trim()) return
 
+    const message = await channelsApi.sendMessage(
+      this.activeChannel,
+      text.trim()
+    )
     messages.push({
-      id: Date.now(),
-      author: 'me',
-      text: text.trim(),
-      time: new Date().toLocaleTimeString([], {
+      ...message,
+      time: new Date(message.time).toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit'
+      }),
+      author: 'me'
+    })
+  },
+
+  async loadMessages(channelId) {
+    const messages = await channelsApi.messages(channelId)
+    this.channelMessages[channelId] = messages.map(message => ({
+      ...message,
+      time: new Date(message.time).toLocaleTimeString([], {
         hour: '2-digit',
         minute: '2-digit'
       })
-    })
+    }))
   },
 
   createWorkspace(name) {
@@ -122,33 +84,77 @@ export const chatStore = reactive({
     return workspace
   },
 
-  createChannel(name, isPrivate) {
-    const id = `${name}-${Date.now()}`
-    const channel = {
-      id,
+  async createChannel(name, isPrivate) {
+    const channel = await channelsApi.create({
       name,
-      private: isPrivate,
-      unread: 0,
-      owner: 'me'
-    }
+      type: isPrivate ? 'PRIVATE' : 'PUBLIC'
+    })
     this.textChannels.push(channel)
-    this.channelMessages[id] = []
-    this.activeChannel = id
+    this.channelMessages[channel.id] = []
+    this.activeChannel = channel.id
     return channel
   },
 
-  removeActiveChannel() {
-    const currentIndex = this.textChannels.findIndex(
-      channel => channel.id === this.activeChannel
-    )
-    if (currentIndex === -1 || this.textChannels.length === 1) return null
+  async joinChannel(name) {
+    const channel = await channelsApi.join(name)
+    if (!this.textChannels.some(item => item.id === channel.id)) {
+      this.textChannels.push(channel)
+    }
+    if (!this.channelMessages[channel.id]) this.channelMessages[channel.id] = []
+    this.activeChannel = channel.id
+    return channel
+  },
 
-    const nextChannel =
-      this.textChannels[currentIndex === 0 ? 1 : currentIndex - 1]
+  async leaveActiveChannel() {
     const removedChannel = this.activeChannel
-    this.textChannels.splice(currentIndex, 1)
+    if (!removedChannel) return null
+    await channelsApi.leave(removedChannel)
     delete this.channelMessages[removedChannel]
-    this.activeChannel = nextChannel.id
-    return nextChannel
+    this.activeChannel = ''
+    await this.loadChannels()
+    return (
+      this.textChannels.find(channel => channel.id === this.activeChannel) ||
+      null
+    )
+  },
+
+  async deleteActiveChannel() {
+    const removedChannel = this.activeChannel
+    if (!removedChannel) return null
+    await channelsApi.delete(removedChannel)
+    delete this.channelMessages[removedChannel]
+    this.activeChannel = ''
+    await this.loadChannels()
+    return (
+      this.textChannels.find(channel => channel.id === this.activeChannel) ||
+      null
+    )
+  },
+
+  async acceptInvitation(channel) {
+    await channelsApi.acceptInvitation(channel.id)
+    await this.loadChannels()
+    const acceptedChannel = this.textChannels.find(
+      item => item.id === channel.id
+    )
+    if (acceptedChannel) this.activeChannel = acceptedChannel.id
+    return acceptedChannel || null
+  },
+
+  async declineInvitation(channel) {
+    await channelsApi.declineInvitation(channel.id)
+    this.textChannels = this.textChannels.filter(item => item.id !== channel.id)
+    if (this.activeChannel === channel.id) {
+      this.activeChannel =
+        this.textChannels.find(item => !item.invited)?.id || ''
+    }
+  },
+
+  async inviteMember(username) {
+    const channel = this.textChannels.find(
+      item => item.id === this.activeChannel
+    )
+    if (!channel) return
+    return channelsApi.invite(channel.id, username)
   }
 })
