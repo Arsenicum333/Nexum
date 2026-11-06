@@ -180,7 +180,25 @@ async function runCommand(value) {
     return true
   }
 
-  const supportedCommands = ['invite', 'revoke', 'kick', 'cancel', 'quit']
+  if (commandName === 'invite') {
+    const username = (args[0] || '').replace(/^@/, '')
+    if (!username) {
+      $q.notify({ type: 'info', message: 'Usage: /invite username' })
+      return true
+    }
+    try {
+      await chatStore.inviteMember(username)
+      $q.notify({
+        type: 'positive',
+        message: `Invitation sent to @${username}`
+      })
+    } catch (error) {
+      $q.notify({ type: 'negative', message: error.message })
+    }
+    return true
+  }
+
+  const supportedCommands = ['revoke', 'kick', 'cancel', 'quit']
   if (supportedCommands.includes(commandName)) {
     $q.notify({
       type: 'info',

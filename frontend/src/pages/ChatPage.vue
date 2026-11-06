@@ -377,9 +377,7 @@ const isMobile = computed(() => $q.screen.lt.sm)
 const currentChannel = computed(() =>
   chatStore.textChannels.find(channel => channel.id === chatStore.activeChannel)
 )
-const currentChannelName = computed(
-  () => currentChannel.value?.name || 'general'
-)
+const currentChannelName = computed(() => currentChannel.value?.name || '')
 const typingUser = computed(() =>
   chatStore.activeChannel === 'random' ? 'Alex' : ''
 )
