@@ -4,13 +4,11 @@
       <UserMenu />
     </q-list>
     <q-separator vertical class="self-stretch" />
-    <q-card
-      v-if="mentionOptions.length"
-      bordered
-      class="mention-menu absolute"
-    >
+    <q-card v-if="mentionOptions.length" bordered class="mention-menu absolute">
       <q-list dense padding>
-        <div class="q-px-md q-pb-xs text-uppercase text-weight-bolder text-caption text-grey-7">
+        <div
+          class="q-px-md q-pb-xs text-uppercase text-weight-bolder text-caption text-grey-7"
+        >
           Mention
         </div>
         <q-item
@@ -118,17 +116,17 @@ function onEnter() {
   submitCommand()
 }
 
-function submitCommand() {
+async function submitCommand() {
   const value = command.value.trim()
   if (!value) return
 
   if (value.startsWith('/')) {
-    const commandHandled = runCommand(value)
+    const commandHandled = await runCommand(value)
     if (!commandHandled && route.path.startsWith('/chat/')) {
-      chatStore.addMessage(value)
+      await sendMessage(value)
     }
   } else if (route.path.startsWith('/chat/')) {
-    chatStore.addMessage(value)
+    await sendMessage(value)
   } else {
     $q.notify({
       type: 'info',
@@ -140,7 +138,15 @@ function submitCommand() {
   commandInput.value?.focus()
 }
 
-function runCommand(value) {
+async function sendMessage(value) {
+  try {
+    await chatStore.addMessage(value)
+  } catch (error) {
+    $q.notify({ type: 'negative', message: error.message })
+  }
+}
+
+async function runCommand(value) {
   const [name, ...args] = value.slice(1).split(/\s+/)
   const commandName = name.toLowerCase()
 
@@ -154,14 +160,13 @@ function runCommand(value) {
 
   if (commandName === 'join' && args[0]) {
     const channelName = args[0].toLowerCase()
-    const knownChannel = ['general', 'random'].includes(channelName)
-    if (knownChannel) {
-      router.push(`/chat/${channelName}`)
+    try {
+      const channel = await chatStore.joinChannel(channelName)
+      await router.push(`/chat/${channel.name}`)
+      $q.notify({ type: 'positive', message: `Joined #${channelName}` })
+    } catch (error) {
+      $q.notify({ type: 'negative', message: error.message })
     }
-    $q.notify({
-      type: 'positive',
-      message: `${knownChannel ? 'Joined' : 'Channel requested'} #${channelName}`
-    })
     return true
   }
 
@@ -175,13 +180,25 @@ function runCommand(value) {
     return true
   }
 
-  const supportedCommands = [
-    'invite',
-    'revoke',
-    'kick',
-    'cancel',
-    'quit'
-  ]
+  if (commandName === 'invite') {
+    const username = (args[0] || '').replace(/^@/, '')
+    if (!username) {
+      $q.notify({ type: 'info', message: 'Usage: /invite username' })
+      return true
+    }
+    try {
+      await chatStore.inviteMember(username)
+      $q.notify({
+        type: 'positive',
+        message: `Invitation sent to @${username}`
+      })
+    } catch (error) {
+      $q.notify({ type: 'negative', message: error.message })
+    }
+    return true
+  }
+
+  const supportedCommands = ['revoke', 'kick', 'cancel', 'quit']
   if (supportedCommands.includes(commandName)) {
     $q.notify({
       type: 'info',

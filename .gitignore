@@ -45,3 +45,5 @@ pnpm-debug.log*
 
 # Temporary files
 *.tmp
+backend/.env.example
+backend/.env

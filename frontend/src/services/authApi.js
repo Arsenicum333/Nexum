@@ -9,7 +9,7 @@ function getPayload(payload) {
   return payload?.data ?? payload
 }
 
-async function request(path, options = {}) {
+export async function request(path, options = {}) {
   const headers = {
     Accept: 'application/json',
     'Content-Type': 'application/json',
