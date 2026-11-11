@@ -7,9 +7,8 @@
       <div
         class="q-pa-md text-weight-bold text-subtitle1 row items-center justify-between border-bottom"
       >
-        <span class="ellipsis">Some Workspace</span>
+        <span class="ellipsis">{{ currentWorkspaceName }}</span>
         <div class="row items-center">
-          <q-btn flat round dense icon="expand_more" size="sm" />
           <q-btn
             v-if="isMobile"
             flat
@@ -132,7 +131,7 @@
             dense
             icon="people"
             color="grey-7"
-            @click="chatStore.openMembersDialog()"
+            @click="openMembersDialog"
           >
             <q-tooltip>View members</q-tooltip>
           </q-btn>
@@ -143,13 +142,21 @@
                 <q-item
                   clickable
                   v-close-popup
-                  :disable="!currentChannel || currentChannel.invited"
+                  :disable="
+                    !currentChannel ||
+                    currentChannel.invited ||
+                    currentChannel.owner === 'me'
+                  "
                   @click="leaveChannel"
                 >
                   <q-item-section avatar
                     ><q-icon name="logout"
                   /></q-item-section>
-                  <q-item-section>Leave channel</q-item-section>
+                  <q-item-section>{{
+                    currentChannel?.owner === 'me'
+                      ? 'Close channel with /quit'
+                      : 'Leave channel'
+                  }}</q-item-section>
                 </q-item>
                 <q-separator />
                 <q-item
@@ -330,7 +337,9 @@
             </q-item-section>
             <q-item-section side>
               <q-badge
-                v-if="member.id === currentChannel?.owner"
+                v-if="
+                  member.role === 'OWNER' || member.id === currentChannel?.owner
+                "
                 color="primary"
                 label="owner"
               />
@@ -346,7 +355,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, nextTick, onMounted } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useQuasar } from 'quasar'
 import { useRoute, useRouter } from 'vue-router'
 import { userStore } from '@/store/userStore'
@@ -366,6 +375,9 @@ const scrollArea = ref(null)
 const loadingMore = ref(false)
 const pageSize = 20
 const startIndexes = ref({})
+const CHANNEL_REFRESH_INTERVAL_MS = 15000
+let channelRefreshTimer
+let isRefreshingChannels = false
 
 const channelTypeOptions = [
   { label: 'Public channel - anyone can join', value: 'public' },
@@ -378,9 +390,13 @@ const currentChannel = computed(() =>
   chatStore.textChannels.find(channel => channel.id === chatStore.activeChannel)
 )
 const currentChannelName = computed(() => currentChannel.value?.name || '')
-const typingUser = computed(() =>
-  chatStore.activeChannel === 'random' ? 'Alex' : ''
+const currentWorkspaceName = computed(
+  () =>
+    chatStore.workspaces.find(
+      workspace => workspace.id === chatStore.activeWorkspaceId
+    )?.name || 'Nexum'
 )
+const typingUser = computed(() => '')
 const members = computed(() => chatStore.getMembers(userStore))
 const sortedChannels = computed(() => chatStore.sortedChannels)
 const lastMessage = computed(() => {
@@ -407,12 +423,12 @@ const hasMore = computed(
 
 function syncChannelFromRoute(channelName) {
   const channel = chatStore.textChannels.find(item => item.name === channelName)
-  if (channel) chatStore.activeChannel = channel.id
+  if (channel) chatStore.setActiveChannel(channel.id)
 }
 
 function selectChannel(channel) {
-  chatStore.activeChannel = channel.id
-  router.push(`/chat/${channel.name}`)
+  chatStore.setActiveChannel(channel.id)
+  router.push(chatStore.workspacePath(channel.name))
   if (isMobile.value) showChannels.value = false
 }
 
@@ -471,8 +487,10 @@ watch(
   channelId => {
     ensureStartIndex(channelId)
     if (channelId) {
-      chatStore
-        .loadMessages(channelId)
+      Promise.all([
+        chatStore.loadMessages(channelId),
+        chatStore.loadMembers(channelId)
+      ])
         .then(() => {
           if (channelId !== chatStore.activeChannel) return
           startIndexes.value[channelId] = Math.max(
@@ -510,7 +528,38 @@ watch(
   { immediate: true }
 )
 
+async function refreshChannels() {
+  if (isRefreshingChannels || document.visibilityState === 'hidden') return
+  isRefreshingChannels = true
+  try {
+    await chatStore.loadChannels()
+    const activeChannel = chatStore.textChannels.find(
+      channel => channel.id === chatStore.activeChannel
+    )
+    const channelName = activeChannel?.name || 'general'
+    if (route.params.channelName !== channelName) {
+      await router.replace(chatStore.workspacePath(channelName))
+    }
+  } catch (error) {
+    $q.notify({ type: 'negative', message: error.message })
+  } finally {
+    isRefreshingChannels = false
+  }
+}
+
+function refreshChannelsWhenVisible() {
+  if (document.visibilityState === 'visible') void refreshChannels()
+}
+
 onMounted(async () => {
+  channelRefreshTimer = window.setInterval(
+    refreshChannelsWhenVisible,
+    CHANNEL_REFRESH_INTERVAL_MS
+  )
+  window.addEventListener('focus', refreshChannelsWhenVisible)
+  document.addEventListener('visibilitychange', refreshChannelsWhenVisible)
+
+  isRefreshingChannels = true
   try {
     await chatStore.loadChannels()
     syncChannelFromRoute(route.params.channelName)
@@ -518,12 +567,20 @@ onMounted(async () => {
       channel => channel.id === chatStore.activeChannel
     )
     if (selectedChannel && route.params.channelName !== selectedChannel.name) {
-      await router.replace(`/chat/${selectedChannel.name}`)
+      await router.replace(chatStore.workspacePath(selectedChannel.name))
     }
   } catch (error) {
     $q.notify({ type: 'negative', message: error.message })
+  } finally {
+    isRefreshingChannels = false
   }
   scrollToBottom()
+})
+
+onUnmounted(() => {
+  window.clearInterval(channelRefreshTimer)
+  window.removeEventListener('focus', refreshChannelsWhenVisible)
+  document.removeEventListener('visibilitychange', refreshChannelsWhenVisible)
 })
 
 function authorName(msg) {
@@ -575,7 +632,7 @@ async function createChannel() {
       name,
       newChannelType.value === 'private'
     )
-    await router.push(`/chat/${channel.name}`)
+    await router.push(chatStore.workspacePath(channel.name))
     createChannelDialog.value = false
   } catch (error) {
     $q.notify({ type: 'negative', message: error.message })
@@ -585,7 +642,11 @@ async function createChannel() {
 async function leaveChannel() {
   try {
     const channel = await chatStore.leaveActiveChannel()
-    await router.push(channel ? `/chat/${channel.name}` : '/chat/general')
+    await router.push(
+      channel
+        ? chatStore.workspacePath(channel.name)
+        : chatStore.workspacePath()
+    )
   } catch (error) {
     $q.notify({ type: 'negative', message: error.message })
   }
@@ -594,7 +655,11 @@ async function leaveChannel() {
 async function deleteChannel() {
   try {
     const channel = await chatStore.deleteActiveChannel()
-    await router.push(channel ? `/chat/${channel.name}` : '/chat/general')
+    await router.push(
+      channel
+        ? chatStore.workspacePath(channel.name)
+        : chatStore.workspacePath()
+    )
   } catch (error) {
     $q.notify({ type: 'negative', message: error.message })
   }
@@ -604,7 +669,7 @@ async function acceptInvitation(channel) {
   try {
     const accepted = await chatStore.acceptInvitation(channel)
     if (accepted) {
-      await router.push(`/chat/${accepted.name}`)
+      await router.push(chatStore.workspacePath(accepted.name))
       if (isMobile.value) showChannels.value = false
     }
   } catch (error) {
@@ -632,6 +697,15 @@ async function inviteMember() {
     $q.notify({ type: 'negative', message: error.message })
   } finally {
     inviteSubmitting.value = false
+  }
+}
+
+async function openMembersDialog() {
+  try {
+    await chatStore.loadMembers()
+    chatStore.openMembersDialog()
+  } catch (error) {
+    $q.notify({ type: 'negative', message: error.message })
   }
 }
 </script>

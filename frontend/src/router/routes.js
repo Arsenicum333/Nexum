@@ -9,11 +9,24 @@ const routes = [
           if (typeof window === 'undefined') return '/chat/general'
           const lastRoute = localStorage.getItem('nexum:last-route')
           const isValidRoute =
-            lastRoute === '/account/edit' || /^\/chat\/[a-z0-9-]+$/.test(lastRoute || '')
+            lastRoute === '/account/edit' ||
+            /^\/workspace\/\d+\/chat\/[a-z0-9-]+$/.test(lastRoute || '') ||
+            /^\/chat\/[a-z0-9-]+$/.test(lastRoute || '')
           return isValidRoute ? lastRoute : '/chat/general'
         }
       },
-      { path: 'chat/:channelName', component: () => import('@/pages/ChatPage.vue') },
+      {
+        path: 'workspace/:workspaceId/chat/:channelName',
+        component: () => import('@/pages/ChatPage.vue')
+      },
+      {
+        path: 'workspace/:workspaceId',
+        component: () => import('@/pages/ChatPage.vue')
+      },
+      {
+        path: 'chat/:channelName',
+        component: () => import('@/pages/ChatPage.vue')
+      },
       {
         path: 'account/edit',
         component: () => import('@/pages/AccountSettingsPage.vue')

@@ -42,6 +42,15 @@ cd backend
 node ace migration:run
 ```
 
+Seed a repeatable local development dataset:
+```bash
+node ace db:seed
+```
+
+The seed creates the `Nexum` workspace, its initial channels, and the users
+`demo@example.com`, `alex@example.com`, and `mariya@example.com`. Their password
+is `password123`. New workspaces start with an empty channel list.
+
 Check the database container:
 ```bash
 docker compose ps

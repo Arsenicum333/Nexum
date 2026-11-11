@@ -29,65 +29,25 @@
       <div class="column full-height">
         <q-list class="col scroll">
           <q-item
-            clickable
-            v-ripple
-            to="/chat/general"
-            class="rounded-borders q-mb-xs flex flex-center q-px-none"
-          >
-            <q-avatar
-              color="primary"
-              text-color="white"
-              square
-              class="rounded-borders"
-            >
-              <q-icon name="chat" />
-            </q-avatar>
-
-            <q-tooltip
-              anchor="center right"
-              self="center left"
-              :offset="[10, 0]"
-            >
-              <div class="text-subtitle1 text-weight-bold">General</div>
-              <div class="text-caption">General chat</div>
-            </q-tooltip>
-          </q-item>
-
-          <q-item
-            clickable
-            v-ripple
-            to="/chat/random"
-            class="rounded-borders q-mb-xs flex flex-center q-px-none"
-          >
-            <q-avatar
-              color="primary"
-              text-color="white"
-              square
-              class="rounded-borders"
-            >
-              <q-icon name="shuffle" />
-            </q-avatar>
-
-            <q-tooltip
-              anchor="center right"
-              self="center left"
-              :offset="[10, 0]"
-            >
-              <div class="text-subtitle1 text-weight-bold">Random</div>
-              <div class="text-caption">Random chat</div>
-            </q-tooltip>
-          </q-item>
-
-          <q-item
             v-for="workspace in workspaces"
             :key="workspace.id"
             clickable
             v-ripple
             class="rounded-borders q-mb-xs flex flex-center q-px-none"
+            :active="workspace.id === chatStore.activeWorkspaceId"
+            @click="selectWorkspace(workspace)"
           >
             <q-avatar
-              color="primary"
-              text-color="white"
+              :color="
+                workspace.id === chatStore.activeWorkspaceId
+                  ? 'primary'
+                  : 'grey-3'
+              "
+              :text-color="
+                workspace.id === chatStore.activeWorkspaceId
+                  ? 'white'
+                  : 'primary'
+              "
               square
               class="rounded-borders text-weight-bold"
             >
@@ -177,7 +137,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useQuasar } from 'quasar'
 import { useRoute, useRouter } from 'vue-router'
 import CommandBar from '@/components/CommandBar.vue'
@@ -220,12 +180,32 @@ function openCreateWorkspaceDialog() {
   createWorkspaceDialog.value = true
 }
 
-function createWorkspace() {
+async function createWorkspace() {
   const name = newWorkspaceName.value.trim()
   if (workspaceNameRule(name) !== true) return
-  chatStore.createWorkspace(name)
-  createWorkspaceDialog.value = false
+  try {
+    await chatStore.createWorkspace(name)
+    createWorkspaceDialog.value = false
+    await router.push(chatStore.workspacePath())
+  } catch (error) {
+    $q.notify({ type: 'negative', message: error.message })
+  }
 }
+
+async function selectWorkspace(workspace) {
+  try {
+    await chatStore.selectWorkspace(workspace.id)
+    await router.push(chatStore.workspacePath())
+  } catch (error) {
+    $q.notify({ type: 'negative', message: error.message })
+  }
+}
+
+onMounted(() => {
+  chatStore.loadWorkspaces().catch(error => {
+    $q.notify({ type: 'negative', message: error.message })
+  })
+})
 
 function goBack() {
   const previousRoute = window.history.state?.back
@@ -235,7 +215,7 @@ function goBack() {
     return
   }
 
-  router.push('/chat/general')
+  router.push(chatStore.workspacePath())
 }
 </script>
 

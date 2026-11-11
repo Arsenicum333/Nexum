@@ -1,22 +1,37 @@
 import { request } from './authApi'
 
 export const channelsApi = {
-  list() {
-    return request('/channels')
+  workspaces() {
+    return request('/workspaces')
   },
 
-  create({ name, type }) {
-    return request('/channels', {
-      method: 'POST',
-      body: JSON.stringify({ name, type })
-    })
-  },
-
-  join(name) {
-    return request('/channels/join', {
+  createWorkspace(name) {
+    return request('/workspaces', {
       method: 'POST',
       body: JSON.stringify({ name })
     })
+  },
+
+  list(workspaceId) {
+    return request(`/channels?workspaceId=${encodeURIComponent(workspaceId)}`)
+  },
+
+  create({ name, type, workspaceId }) {
+    return request('/channels', {
+      method: 'POST',
+      body: JSON.stringify({ name, type, workspaceId })
+    })
+  },
+
+  join(name, type = 'PUBLIC', workspaceId) {
+    return request('/channels/join', {
+      method: 'POST',
+      body: JSON.stringify({ name, type, workspaceId })
+    })
+  },
+
+  members(channelId) {
+    return request(`/channels/${channelId}/members`)
   },
 
   leave(channelId) {
@@ -29,6 +44,20 @@ export const channelsApi = {
 
   invite(channelId, username) {
     return request(`/channels/${channelId}/invitations`, {
+      method: 'POST',
+      body: JSON.stringify({ username })
+    })
+  },
+
+  revoke(channelId, username) {
+    return request(`/channels/${channelId}/revocations`, {
+      method: 'POST',
+      body: JSON.stringify({ username })
+    })
+  },
+
+  kick(channelId, username) {
+    return request(`/channels/${channelId}/kicks`, {
       method: 'POST',
       body: JSON.stringify({ username })
     })
