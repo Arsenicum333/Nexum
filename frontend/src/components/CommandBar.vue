@@ -87,7 +87,7 @@ const currentChannel = computed(() =>
 )
 
 const inputPlaceholder = computed(() =>
-  route.path.startsWith('/chat/')
+  route.path.includes('/chat/')
     ? `Write in #${currentChannelName.value}... use @ to mention`
     : 'Write a message or type /help'
 )
@@ -98,7 +98,7 @@ const mentionQuery = computed(() => {
   return match ? match[1].toLowerCase() : null
 })
 const mentionOptions = computed(() => {
-  if (!route.path.startsWith('/chat/') || mentionQuery.value === null) return []
+  if (!route.path.includes('/chat/') || mentionQuery.value === null) return []
   return members.value.filter(
     member =>
       member.id !== 'me' &&
@@ -127,7 +127,7 @@ async function submitCommand() {
   try {
     if (value.startsWith('/')) {
       const commandHandled = await runCommand(value)
-      if (!commandHandled && route.path.startsWith('/chat/')) {
+      if (!commandHandled && route.path.includes('/chat/')) {
         submitted = await sendMessage(value)
       } else if (!commandHandled) {
         $q.notify({
@@ -136,7 +136,7 @@ async function submitCommand() {
         })
         submitted = false
       }
-    } else if (route.path.startsWith('/chat/')) {
+    } else if (route.path.includes('/chat/')) {
       submitted = await sendMessage(value)
     } else {
       $q.notify({
@@ -187,7 +187,7 @@ async function runCommand(value) {
       return true
     }
     const channel = await chatStore.joinChannel(channelName, isPrivate)
-    await router.push(`/chat/${channel.name}`)
+    await router.push(chatStore.workspacePath(channel.name))
     $q.notify({
       type: 'positive',
       message: channel.created
@@ -202,7 +202,7 @@ async function runCommand(value) {
   }
 
   if (commandName === 'list') {
-    if (!route.path.startsWith('/chat/')) {
+    if (!route.path.includes('/chat/')) {
       $q.notify({ type: 'info', message: 'Open a channel to list its members' })
       return true
     }
@@ -255,7 +255,9 @@ async function runCommand(value) {
     }
     const nextChannel = await chatStore.quitChannel()
     await router.push(
-      nextChannel ? `/chat/${nextChannel.name}` : '/chat/general'
+      nextChannel
+        ? chatStore.workspacePath(nextChannel.name)
+        : chatStore.workspacePath()
     )
     $q.notify({ type: 'positive', message: 'Channel closed' })
     return true
@@ -272,7 +274,9 @@ async function runCommand(value) {
       ? await chatStore.deleteActiveChannel()
       : await chatStore.leaveActiveChannel()
     await router.push(
-      nextChannel ? `/chat/${nextChannel.name}` : '/chat/general'
+      nextChannel
+        ? chatStore.workspacePath(nextChannel.name)
+        : chatStore.workspacePath()
     )
     $q.notify({
       type: 'positive',

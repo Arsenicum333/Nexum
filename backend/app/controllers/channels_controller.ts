@@ -55,9 +55,15 @@ export default class ChannelsController {
     return serialize(members)
   }
 
-  async index({ auth, serialize }: HttpContext) {
+  async index({ auth, request, response, serialize }: HttpContext) {
     const user = auth.getUserOrFail()
     const userId = String(user.id)
+    const workspaceId = this.getWorkspaceId(
+      request.input('workspaceId'),
+      response
+    )
+    if (!workspaceId) return
+    await this.requireWorkspaceMember(workspaceId, userId, response)
     await this.removeExpiredChannels()
 
     const memberships = await db
@@ -65,12 +71,14 @@ export default class ChannelsController {
       .join('channel_members', 'channel_members.channel_id', 'channels.id')
       .where('channel_members.user_id', userId)
       .where('channel_members.membership_status', 'ACTIVE')
+      .where('channels.workspace_id', workspaceId)
       .whereNull('channels.deleted_at')
       .select(
         'channels.id',
         'channels.name',
         'channels.channel_type',
-        'channels.owner_id'
+        'channels.owner_id',
+        'channels.workspace_id'
       )
 
     const invitations = await db
@@ -78,12 +86,14 @@ export default class ChannelsController {
       .join('channels', 'channels.id', 'invitations.channel_id')
       .where('invitations.invitee_id', userId)
       .where('invitations.status', 'PENDING')
+      .where('channels.workspace_id', workspaceId)
       .whereNull('channels.deleted_at')
       .select(
         'channels.id',
         'channels.name',
         'channels.channel_type',
         'channels.owner_id',
+        'channels.workspace_id',
         'invitations.id as invitation_id'
       )
 
@@ -108,7 +118,10 @@ export default class ChannelsController {
   async store({ auth, request, response, serialize }: HttpContext) {
     const user = auth.getUserOrFail()
     const userId = String(user.id)
-    const { name, type } = await request.validateUsing(createChannelValidator)
+    const { name, type, workspaceId } = await request.validateUsing(
+      createChannelValidator
+    )
+    await this.requireWorkspaceMember(String(workspaceId), userId, response)
     await this.removeExpiredChannels()
 
     const existing = await db
@@ -130,10 +143,11 @@ export default class ChannelsController {
           .insert({
             name,
             channel_type: type,
+            workspace_id: String(workspaceId),
             owner_id: userId,
             last_activity_at: new Date()
           })
-          .returning(['id', 'name', 'channel_type', 'owner_id'])
+          .returning(['id', 'name', 'channel_type', 'owner_id', 'workspace_id'])
 
         await trx.insertQuery().table('channel_members').insert({
           channel_id: createdChannel.id,
@@ -162,12 +176,15 @@ export default class ChannelsController {
   async joinPublic({ auth, request, response, serialize }: HttpContext) {
     const user = auth.getUserOrFail()
     const userId = String(user.id)
-    const { name, type } = await request.validateUsing(joinChannelValidator)
+    const { name, type, workspaceId } =
+      await request.validateUsing(joinChannelValidator)
+    await this.requireWorkspaceMember(String(workspaceId), userId, response)
 
     await this.removeExpiredChannels()
     let channel = await db
       .from('channels')
       .where('name', name)
+      .where('workspace_id', String(workspaceId))
       .whereNull('deleted_at')
       .first()
     if (!channel) {
@@ -179,10 +196,17 @@ export default class ChannelsController {
             .insert({
               name,
               channel_type: type || 'PUBLIC',
+              workspace_id: String(workspaceId),
               owner_id: userId,
               last_activity_at: new Date()
             })
-            .returning(['id', 'name', 'channel_type', 'owner_id'])
+            .returning([
+              'id',
+              'name',
+              'channel_type',
+              'owner_id',
+              'workspace_id'
+            ])
 
           await trx.insertQuery().table('channel_members').insert({
             channel_id: created.id,
@@ -260,7 +284,7 @@ export default class ChannelsController {
     channel = await db
       .from('channels')
       .where('id', channel.id)
-      .select('id', 'name', 'channel_type', 'owner_id')
+      .select('id', 'name', 'channel_type', 'owner_id', 'workspace_id')
       .first()
     return serialize(this.serializeChannel(channel, userId))
   }
@@ -978,6 +1002,7 @@ export default class ChannelsController {
       name: string
       channel_type: string
       owner_id: string | number | bigint
+      workspace_id?: string | number | bigint | null
     },
     userId: string | number | bigint
   ) {
@@ -990,6 +1015,7 @@ export default class ChannelsController {
           ? 'me'
           : String(channel.owner_id),
       ownerId: String(channel.owner_id),
+      workspaceId: channel.workspace_id ? String(channel.workspace_id) : null,
       invited: false
     }
   }
@@ -1000,6 +1026,31 @@ export default class ChannelsController {
       return null
     }
     return value
+  }
+
+  private getWorkspaceId(value: unknown, response: HttpContext['response']) {
+    if (typeof value !== 'string' || !/^[1-9]\d*$/.test(value)) {
+      response.badRequest({ message: 'A valid workspaceId is required' })
+      return null
+    }
+    return value
+  }
+
+  private async requireWorkspaceMember(
+    workspaceId: string,
+    userId: string,
+    response: HttpContext['response']
+  ) {
+    const membership = await db
+      .from('workspace_members')
+      .where('workspace_id', workspaceId)
+      .where('user_id', userId)
+      .first()
+    if (!membership) {
+      response.forbidden({ message: 'You are not a member of this workspace' })
+      return false
+    }
+    return true
   }
 
   private isUniqueViolation(error: unknown) {

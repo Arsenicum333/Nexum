@@ -32,11 +32,33 @@ entity notification_settings {
   CHECK (notification_scope IN ('ALL', 'MENTIONS_ONLY'))
 }
 
+entity workspaces {
+  id : BIGINT <<PK>>
+  --
+  name : VARCHAR(40) <<UQ>>
+  owner_id : BIGINT <<FK>>
+  created_at : TIMESTAMP
+  updated_at : TIMESTAMP
+}
+
+entity workspace_members {
+  id : BIGINT <<PK>>
+  --
+  workspace_id : BIGINT <<FK>>
+  user_id : BIGINT <<FK>>
+  role : VARCHAR(16) <<CHECK>>
+  joined_at : TIMESTAMP
+  --
+  UNIQUE (workspace_id, user_id)
+  CHECK (role IN ('OWNER', 'MEMBER'))
+}
+
 entity channels {
   id : BIGINT <<PK>>
   --
   name : VARCHAR(40)
   channel_type : VARCHAR(8) <<CHECK>>
+  workspace_id : BIGINT <<FK>>
   owner_id : BIGINT <<FK>>
   created_at : TIMESTAMP
   last_activity_at : TIMESTAMP
@@ -128,6 +150,10 @@ note right of channel_bans
 end note
 
 users "1" -- "0..1" notification_settings : has
+users "1" -- "0..*" workspaces : owns
+users "1" -- "0..*" workspace_members : joins
+workspaces "1" -- "0..*" workspace_members : contains
+workspaces "1" -- "0..*" channels : contains
 users "1" -- "0..*" channels : owns
 users "1" -- "0..*" channel_members : joins
 channels "1" -- "0..*" channel_members : contains

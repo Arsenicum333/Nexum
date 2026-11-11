@@ -6,6 +6,8 @@ export const chatStore = reactive({
   membersDialogOpen: false,
   workspaceRailVisible: true,
   workspaces: [],
+  activeWorkspaceId: '',
+  workspaceActiveChannels: {},
   textChannels: [],
   channelMessages: {},
   channelMembers: {},
@@ -18,15 +20,61 @@ export const chatStore = reactive({
     )
   },
 
+  async loadWorkspaces() {
+    this.workspaces = await channelsApi.workspaces()
+    if (
+      !this.workspaces.some(
+        workspace => workspace.id === this.activeWorkspaceId
+      )
+    ) {
+      this.activeWorkspaceId = this.workspaces[0]?.id || ''
+    }
+    return this.workspaces
+  },
+
+  workspacePath(channelName) {
+    const targetChannel =
+      channelName ||
+      this.textChannels.find(channel => channel.id === this.activeChannel)?.name
+    return targetChannel
+      ? `/workspace/${this.activeWorkspaceId}/chat/${targetChannel}`
+      : `/workspace/${this.activeWorkspaceId}`
+  },
+
+  setActiveChannel(channelId) {
+    this.activeChannel = channelId
+    if (this.activeWorkspaceId && channelId) {
+      this.workspaceActiveChannels[this.activeWorkspaceId] = channelId
+    }
+  },
+
   async loadChannels() {
-    this.textChannels = await channelsApi.list()
+    if (!this.activeWorkspaceId) await this.loadWorkspaces()
+    if (!this.activeWorkspaceId) {
+      this.textChannels = []
+      this.activeChannel = ''
+      return this.textChannels
+    }
+    this.textChannels = await channelsApi.list(this.activeWorkspaceId)
     this.textChannels.forEach(channel => {
       if (!this.channelMessages[channel.id])
         this.channelMessages[channel.id] = []
     })
-    if (!this.textChannels.some(channel => channel.id === this.activeChannel)) {
-      this.activeChannel =
+    const savedChannel = this.workspaceActiveChannels[this.activeWorkspaceId]
+    const preferredChannel = this.textChannels.find(
+      channel => channel.id === savedChannel && !channel.invited
+    )
+    const generalChannel = this.textChannels.find(
+      channel => channel.name === 'general' && !channel.invited
+    )
+    if (preferredChannel) this.setActiveChannel(preferredChannel.id)
+    else if (generalChannel) this.setActiveChannel(generalChannel.id)
+    else if (
+      !this.textChannels.some(channel => channel.id === this.activeChannel)
+    ) {
+      this.setActiveChannel(
         this.textChannels.find(channel => !channel.invited)?.id || ''
+      )
     }
     return this.textChannels
   },
@@ -96,33 +144,51 @@ export const chatStore = reactive({
     }))
   },
 
-  createWorkspace(name) {
-    const workspace = { id: `workspace-${Date.now()}`, name }
+  async createWorkspace(name) {
+    const workspace = await channelsApi.createWorkspace(name)
     this.workspaces.push(workspace)
+    this.activeWorkspaceId = workspace.id
+    this.textChannels = []
+    this.setActiveChannel('')
+    await this.loadChannels()
     return workspace
+  },
+
+  async selectWorkspace(workspaceId) {
+    if (this.workspaces.some(workspace => workspace.id === workspaceId)) {
+      if (this.activeWorkspaceId && this.activeChannel) {
+        this.workspaceActiveChannels[this.activeWorkspaceId] =
+          this.activeChannel
+      }
+      this.activeWorkspaceId = workspaceId
+      this.setActiveChannel('')
+      await this.loadChannels()
+    }
   },
 
   async createChannel(name, isPrivate) {
     const channel = await channelsApi.create({
       name,
-      type: isPrivate ? 'PRIVATE' : 'PUBLIC'
+      type: isPrivate ? 'PRIVATE' : 'PUBLIC',
+      workspaceId: this.activeWorkspaceId
     })
     this.textChannels.push(channel)
     this.channelMessages[channel.id] = []
-    this.activeChannel = channel.id
+    this.setActiveChannel(channel.id)
     return channel
   },
 
   async joinChannel(name, isPrivate = false) {
     const channel = await channelsApi.join(
       name,
-      isPrivate ? 'PRIVATE' : 'PUBLIC'
+      isPrivate ? 'PRIVATE' : 'PUBLIC',
+      this.activeWorkspaceId
     )
     if (!this.textChannels.some(item => item.id === channel.id)) {
       this.textChannels.push(channel)
     }
     if (!this.channelMessages[channel.id]) this.channelMessages[channel.id] = []
-    this.activeChannel = channel.id
+    this.setActiveChannel(channel.id)
     return channel
   },
 
@@ -131,7 +197,7 @@ export const chatStore = reactive({
     if (!removedChannel) return null
     await channelsApi.leave(removedChannel)
     delete this.channelMessages[removedChannel]
-    this.activeChannel = ''
+    this.setActiveChannel('')
     await this.loadChannels()
     return (
       this.textChannels.find(channel => channel.id === this.activeChannel) ||
@@ -144,7 +210,7 @@ export const chatStore = reactive({
     if (!removedChannel) return null
     await channelsApi.delete(removedChannel)
     delete this.channelMessages[removedChannel]
-    this.activeChannel = ''
+    this.setActiveChannel('')
     await this.loadChannels()
     return (
       this.textChannels.find(channel => channel.id === this.activeChannel) ||
@@ -158,7 +224,7 @@ export const chatStore = reactive({
     const acceptedChannel = this.textChannels.find(
       item => item.id === channel.id
     )
-    if (acceptedChannel) this.activeChannel = acceptedChannel.id
+    if (acceptedChannel) this.setActiveChannel(acceptedChannel.id)
     return acceptedChannel || null
   },
 
@@ -166,8 +232,9 @@ export const chatStore = reactive({
     await channelsApi.declineInvitation(channel.id)
     this.textChannels = this.textChannels.filter(item => item.id !== channel.id)
     if (this.activeChannel === channel.id) {
-      this.activeChannel =
+      this.setActiveChannel(
         this.textChannels.find(item => !item.invited)?.id || ''
+      )
     }
   },
 

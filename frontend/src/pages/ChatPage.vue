@@ -7,9 +7,8 @@
       <div
         class="q-pa-md text-weight-bold text-subtitle1 row items-center justify-between border-bottom"
       >
-        <span class="ellipsis">Some Workspace</span>
+        <span class="ellipsis">{{ currentWorkspaceName }}</span>
         <div class="row items-center">
-          <q-btn flat round dense icon="expand_more" size="sm" />
           <q-btn
             v-if="isMobile"
             flat
@@ -391,9 +390,13 @@ const currentChannel = computed(() =>
   chatStore.textChannels.find(channel => channel.id === chatStore.activeChannel)
 )
 const currentChannelName = computed(() => currentChannel.value?.name || '')
-const typingUser = computed(() =>
-  chatStore.activeChannel === 'random' ? 'Alex' : ''
+const currentWorkspaceName = computed(
+  () =>
+    chatStore.workspaces.find(
+      workspace => workspace.id === chatStore.activeWorkspaceId
+    )?.name || 'Nexum'
 )
+const typingUser = computed(() => '')
 const members = computed(() => chatStore.getMembers(userStore))
 const sortedChannels = computed(() => chatStore.sortedChannels)
 const lastMessage = computed(() => {
@@ -420,12 +423,12 @@ const hasMore = computed(
 
 function syncChannelFromRoute(channelName) {
   const channel = chatStore.textChannels.find(item => item.name === channelName)
-  if (channel) chatStore.activeChannel = channel.id
+  if (channel) chatStore.setActiveChannel(channel.id)
 }
 
 function selectChannel(channel) {
-  chatStore.activeChannel = channel.id
-  router.push(`/chat/${channel.name}`)
+  chatStore.setActiveChannel(channel.id)
+  router.push(chatStore.workspacePath(channel.name))
   if (isMobile.value) showChannels.value = false
 }
 
@@ -535,7 +538,7 @@ async function refreshChannels() {
     )
     const channelName = activeChannel?.name || 'general'
     if (route.params.channelName !== channelName) {
-      await router.replace(`/chat/${channelName}`)
+      await router.replace(chatStore.workspacePath(channelName))
     }
   } catch (error) {
     $q.notify({ type: 'negative', message: error.message })
@@ -564,7 +567,7 @@ onMounted(async () => {
       channel => channel.id === chatStore.activeChannel
     )
     if (selectedChannel && route.params.channelName !== selectedChannel.name) {
-      await router.replace(`/chat/${selectedChannel.name}`)
+      await router.replace(chatStore.workspacePath(selectedChannel.name))
     }
   } catch (error) {
     $q.notify({ type: 'negative', message: error.message })
@@ -629,7 +632,7 @@ async function createChannel() {
       name,
       newChannelType.value === 'private'
     )
-    await router.push(`/chat/${channel.name}`)
+    await router.push(chatStore.workspacePath(channel.name))
     createChannelDialog.value = false
   } catch (error) {
     $q.notify({ type: 'negative', message: error.message })
@@ -639,7 +642,11 @@ async function createChannel() {
 async function leaveChannel() {
   try {
     const channel = await chatStore.leaveActiveChannel()
-    await router.push(channel ? `/chat/${channel.name}` : '/chat/general')
+    await router.push(
+      channel
+        ? chatStore.workspacePath(channel.name)
+        : chatStore.workspacePath()
+    )
   } catch (error) {
     $q.notify({ type: 'negative', message: error.message })
   }
@@ -648,7 +655,11 @@ async function leaveChannel() {
 async function deleteChannel() {
   try {
     const channel = await chatStore.deleteActiveChannel()
-    await router.push(channel ? `/chat/${channel.name}` : '/chat/general')
+    await router.push(
+      channel
+        ? chatStore.workspacePath(channel.name)
+        : chatStore.workspacePath()
+    )
   } catch (error) {
     $q.notify({ type: 'negative', message: error.message })
   }
@@ -658,7 +669,7 @@ async function acceptInvitation(channel) {
   try {
     const accepted = await chatStore.acceptInvitation(channel)
     if (accepted) {
-      await router.push(`/chat/${accepted.name}`)
+      await router.push(chatStore.workspacePath(accepted.name))
       if (isMobile.value) showChannels.value = false
     }
   } catch (error) {

@@ -1,21 +1,32 @@
 import { request } from './authApi'
 
 export const channelsApi = {
-  list() {
-    return request('/channels')
+  workspaces() {
+    return request('/workspaces')
   },
 
-  create({ name, type }) {
-    return request('/channels', {
+  createWorkspace(name) {
+    return request('/workspaces', {
       method: 'POST',
-      body: JSON.stringify({ name, type })
+      body: JSON.stringify({ name })
     })
   },
 
-  join(name, type = 'PUBLIC') {
+  list(workspaceId) {
+    return request(`/channels?workspaceId=${encodeURIComponent(workspaceId)}`)
+  },
+
+  create({ name, type, workspaceId }) {
+    return request('/channels', {
+      method: 'POST',
+      body: JSON.stringify({ name, type, workspaceId })
+    })
+  },
+
+  join(name, type = 'PUBLIC', workspaceId) {
     return request('/channels/join', {
       method: 'POST',
-      body: JSON.stringify({ name, type })
+      body: JSON.stringify({ name, type, workspaceId })
     })
   },
 

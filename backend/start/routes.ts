@@ -36,6 +36,15 @@ router
 
     router
       .group(() => {
+        router.get('', [controllers.Workspaces, 'index'])
+        router.post('', [controllers.Workspaces, 'store'])
+      })
+      .prefix('workspaces')
+      .as('workspaces')
+      .use(middleware.auth())
+
+    router
+      .group(() => {
         router.get('channels', [controllers.Channels, 'index'])
         router.post('channels', [controllers.Channels, 'store'])
         router.post('channels/join', [controllers.Channels, 'joinPublic'])

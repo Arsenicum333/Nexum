@@ -8,7 +8,18 @@ import { BaseModel, column } from '@adonisjs/lucid/orm'
 import { DateTime } from 'luxon'
 
 export class AuthAccessTokenSchema extends BaseModel {
-  static $columns = ['abilities', 'createdAt', 'expiresAt', 'hash', 'id', 'lastUsedAt', 'name', 'tokenableId', 'type', 'updatedAt'] as const
+  static $columns = [
+    'abilities',
+    'createdAt',
+    'expiresAt',
+    'hash',
+    'id',
+    'lastUsedAt',
+    'name',
+    'tokenableId',
+    'type',
+    'updatedAt'
+  ] as const
   $columns = AuthAccessTokenSchema.$columns
   @column()
   declare abilities: string
@@ -33,7 +44,15 @@ export class AuthAccessTokenSchema extends BaseModel {
 }
 
 export class ChannelBanSchema extends BaseModel {
-  static $columns = ['channelId', 'createdAt', 'createdBy', 'id', 'reason', 'revokedAt', 'userId'] as const
+  static $columns = [
+    'channelId',
+    'createdAt',
+    'createdBy',
+    'id',
+    'reason',
+    'revokedAt',
+    'userId'
+  ] as const
   $columns = ChannelBanSchema.$columns
   @column()
   declare channelId: bigint | number
@@ -52,7 +71,15 @@ export class ChannelBanSchema extends BaseModel {
 }
 
 export class ChannelMemberSchema extends BaseModel {
-  static $columns = ['channelId', 'id', 'joinedAt', 'leftAt', 'membershipStatus', 'role', 'userId'] as const
+  static $columns = [
+    'channelId',
+    'id',
+    'joinedAt',
+    'leftAt',
+    'membershipStatus',
+    'role',
+    'userId'
+  ] as const
   $columns = ChannelMemberSchema.$columns
   @column()
   declare channelId: bigint | number
@@ -71,7 +98,16 @@ export class ChannelMemberSchema extends BaseModel {
 }
 
 export class ChannelSchema extends BaseModel {
-  static $columns = ['channelType', 'createdAt', 'deletedAt', 'id', 'lastActivityAt', 'name', 'ownerId'] as const
+  static $columns = [
+    'channelType',
+    'createdAt',
+    'deletedAt',
+    'id',
+    'lastActivityAt',
+    'name',
+    'ownerId',
+    'workspaceId'
+  ] as const
   $columns = ChannelSchema.$columns
   @column()
   declare channelType: string
@@ -87,10 +123,20 @@ export class ChannelSchema extends BaseModel {
   declare name: string
   @column()
   declare ownerId: bigint | number
+  @column()
+  declare workspaceId: bigint | number | null
 }
 
 export class InvitationSchema extends BaseModel {
-  static $columns = ['channelId', 'createdAt', 'id', 'inviteeId', 'inviterId', 'respondedAt', 'status'] as const
+  static $columns = [
+    'channelId',
+    'createdAt',
+    'id',
+    'inviteeId',
+    'inviterId',
+    'respondedAt',
+    'status'
+  ] as const
   $columns = InvitationSchema.$columns
   @column()
   declare channelId: bigint | number
@@ -109,7 +155,13 @@ export class InvitationSchema extends BaseModel {
 }
 
 export class KickVoteSchema extends BaseModel {
-  static $columns = ['channelId', 'createdAt', 'id', 'targetUserId', 'voterUserId'] as const
+  static $columns = [
+    'channelId',
+    'createdAt',
+    'id',
+    'targetUserId',
+    'voterUserId'
+  ] as const
   $columns = KickVoteSchema.$columns
   @column()
   declare channelId: bigint | number
@@ -135,7 +187,15 @@ export class MessageMentionSchema extends BaseModel {
 }
 
 export class MessageSchema extends BaseModel {
-  static $columns = ['authorId', 'channelId', 'content', 'createdAt', 'deletedAt', 'editedAt', 'id'] as const
+  static $columns = [
+    'authorId',
+    'channelId',
+    'content',
+    'createdAt',
+    'deletedAt',
+    'editedAt',
+    'id'
+  ] as const
   $columns = MessageSchema.$columns
   @column()
   declare authorId: bigint | number
@@ -154,7 +214,13 @@ export class MessageSchema extends BaseModel {
 }
 
 export class NotificationSettingSchema extends BaseModel {
-  static $columns = ['browserNotifications', 'id', 'notificationScope', 'updatedAt', 'userId'] as const
+  static $columns = [
+    'browserNotifications',
+    'id',
+    'notificationScope',
+    'updatedAt',
+    'userId'
+  ] as const
   $columns = NotificationSettingSchema.$columns
   @column()
   declare browserNotifications: boolean
@@ -169,7 +235,18 @@ export class NotificationSettingSchema extends BaseModel {
 }
 
 export class UserSchema extends BaseModel {
-  static $columns = ['createdAt', 'displayName', 'email', 'firstName', 'id', 'lastName', 'passwordHash', 'status', 'updatedAt', 'username'] as const
+  static $columns = [
+    'createdAt',
+    'displayName',
+    'email',
+    'firstName',
+    'id',
+    'lastName',
+    'passwordHash',
+    'status',
+    'updatedAt',
+    'username'
+  ] as const
   $columns = UserSchema.$columns
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime
@@ -191,4 +268,34 @@ export class UserSchema extends BaseModel {
   declare updatedAt: DateTime
   @column()
   declare username: string
+}
+
+export class WorkspaceMemberSchema extends BaseModel {
+  static $columns = ['id', 'joinedAt', 'role', 'userId', 'workspaceId'] as const
+  $columns = WorkspaceMemberSchema.$columns
+  @column({ isPrimary: true })
+  declare id: bigint | number
+  @column.dateTime()
+  declare joinedAt: DateTime
+  @column()
+  declare role: string
+  @column()
+  declare userId: bigint | number
+  @column()
+  declare workspaceId: bigint | number
+}
+
+export class WorkspaceSchema extends BaseModel {
+  static $columns = ['createdAt', 'id', 'name', 'ownerId', 'updatedAt'] as const
+  $columns = WorkspaceSchema.$columns
+  @column.dateTime({ autoCreate: true })
+  declare createdAt: DateTime
+  @column({ isPrimary: true })
+  declare id: bigint | number
+  @column()
+  declare name: string
+  @column()
+  declare ownerId: bigint | number
+  @column.dateTime({ autoCreate: true, autoUpdate: true })
+  declare updatedAt: DateTime
 }

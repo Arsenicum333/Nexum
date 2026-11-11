@@ -9,6 +9,7 @@ import {
 import routes from './routes.js'
 import { authApi } from '@/services/authApi'
 import { userStore } from '@/store/userStore'
+import { chatStore } from '@/store/chatStore'
 
 /*
  * If not building with SSR mode, you can
@@ -46,7 +47,6 @@ export default defineRouter((/* { store, ssrContext } */) => {
         : { path: '/auth/login', query: { redirect: to.fullPath } }
     }
 
-    if (isAuthRoute) return { path: '/chat/general' }
     if (!userStore.authenticated) {
       try {
         userStore.update(await authApi.profile())
@@ -54,6 +54,31 @@ export default defineRouter((/* { store, ssrContext } */) => {
       } catch {
         userStore.clear()
         return { path: '/auth/login', query: { redirect: to.fullPath } }
+      }
+    }
+
+    await chatStore.loadWorkspaces()
+    if (isAuthRoute) return { path: chatStore.workspacePath() }
+    const workspaceId = to.params.workspaceId
+    if (workspaceId && String(workspaceId) !== chatStore.activeWorkspaceId) {
+      await chatStore.selectWorkspace(String(workspaceId))
+      if (String(workspaceId) !== chatStore.activeWorkspaceId) {
+        return { path: chatStore.workspacePath(String(to.params.channelName)) }
+      }
+    }
+    if (!workspaceId && to.params.channelName) {
+      return { path: chatStore.workspacePath(String(to.params.channelName)) }
+    }
+
+    if (to.params.channelName) {
+      await chatStore.loadChannels()
+      const requestedChannel = chatStore.textChannels.find(
+        channel => channel.name === to.params.channelName
+      )
+      if (requestedChannel && !requestedChannel.invited) {
+        chatStore.setActiveChannel(requestedChannel.id)
+      } else {
+        return { path: chatStore.workspacePath() }
       }
     }
 
