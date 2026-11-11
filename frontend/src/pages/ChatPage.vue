@@ -132,7 +132,7 @@
             dense
             icon="people"
             color="grey-7"
-            @click="chatStore.openMembersDialog()"
+            @click="openMembersDialog"
           >
             <q-tooltip>View members</q-tooltip>
           </q-btn>
@@ -338,7 +338,9 @@
             </q-item-section>
             <q-item-section side>
               <q-badge
-                v-if="member.id === currentChannel?.owner"
+                v-if="
+                  member.role === 'OWNER' || member.id === currentChannel?.owner
+                "
                 color="primary"
                 label="owner"
               />
@@ -482,8 +484,10 @@ watch(
   channelId => {
     ensureStartIndex(channelId)
     if (channelId) {
-      chatStore
-        .loadMessages(channelId)
+      Promise.all([
+        chatStore.loadMessages(channelId),
+        chatStore.loadMembers(channelId)
+      ])
         .then(() => {
           if (channelId !== chatStore.activeChannel) return
           startIndexes.value[channelId] = Math.max(
@@ -682,6 +686,15 @@ async function inviteMember() {
     $q.notify({ type: 'negative', message: error.message })
   } finally {
     inviteSubmitting.value = false
+  }
+}
+
+async function openMembersDialog() {
+  try {
+    await chatStore.loadMembers()
+    chatStore.openMembersDialog()
+  } catch (error) {
+    $q.notify({ type: 'negative', message: error.message })
   }
 }
 </script>

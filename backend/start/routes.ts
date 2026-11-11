@@ -39,15 +39,31 @@ router
         router.get('channels', [controllers.Channels, 'index'])
         router.post('channels', [controllers.Channels, 'store'])
         router.post('channels/join', [controllers.Channels, 'joinPublic'])
+        router.get('channels/:id/members', [controllers.Channels, 'members'])
         router.post('channels/:id/leave', [controllers.Channels, 'leave'])
         router.delete('channels/:id', [controllers.Channels, 'destroy'])
-        router.post('channels/:id/invitations', [controllers.Channels, 'invite'])
-        router.post('channels/:id/revocations', [controllers.Channels, 'revoke'])
+        router.post('channels/:id/invitations', [
+          controllers.Channels,
+          'invite'
+        ])
+        router.post('channels/:id/revocations', [
+          controllers.Channels,
+          'revoke'
+        ])
         router.post('channels/:id/kicks', [controllers.Channels, 'kick'])
-        router.post('channels/:id/invitations/accept', [controllers.Channels, 'acceptInvitation'])
-        router.post('channels/:id/invitations/decline', [controllers.Channels, 'declineInvitation'])
+        router.post('channels/:id/invitations/accept', [
+          controllers.Channels,
+          'acceptInvitation'
+        ])
+        router.post('channels/:id/invitations/decline', [
+          controllers.Channels,
+          'declineInvitation'
+        ])
         router.get('channels/:id/messages', [controllers.Channels, 'messages'])
-        router.post('channels/:id/messages', [controllers.Channels, 'sendMessage'])
+        router.post('channels/:id/messages', [
+          controllers.Channels,
+          'sendMessage'
+        ])
       })
       .use(middleware.auth())
   })

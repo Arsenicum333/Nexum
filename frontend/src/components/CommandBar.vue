@@ -82,6 +82,9 @@ const currentChannelName = computed(() => {
   )
   return channel?.name || 'channel'
 })
+const currentChannel = computed(() =>
+  chatStore.textChannels.find(item => item.id === chatStore.activeChannel)
+)
 
 const inputPlaceholder = computed(() =>
   route.path.startsWith('/chat/')
@@ -204,6 +207,7 @@ async function runCommand(value) {
       return true
     }
 
+    await chatStore.loadMembers()
     chatStore.openMembersDialog()
     return true
   }
@@ -258,7 +262,22 @@ async function runCommand(value) {
   }
 
   if (commandName === 'cancel') {
-    $q.notify({ type: 'info', message: 'Use /quit to close your channel' })
+    if (!currentChannel.value) {
+      $q.notify({ type: 'info', message: 'Open a channel first' })
+      return true
+    }
+
+    const isOwner = currentChannel.value.owner === 'me'
+    const nextChannel = isOwner
+      ? await chatStore.deleteActiveChannel()
+      : await chatStore.leaveActiveChannel()
+    await router.push(
+      nextChannel ? `/chat/${nextChannel.name}` : '/chat/general'
+    )
+    $q.notify({
+      type: 'positive',
+      message: isOwner ? 'Channel cancelled' : 'You left the channel'
+    })
     return true
   }
 

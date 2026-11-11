@@ -6,10 +6,9 @@ export const chatStore = reactive({
   membersDialogOpen: false,
   workspaceRailVisible: true,
   workspaces: [],
-
   textChannels: [],
-
   channelMessages: {},
+  channelMembers: {},
 
   get sortedChannels() {
     return [...this.textChannels].sort(
@@ -33,16 +32,31 @@ export const chatStore = reactive({
   },
 
   getMembers(currentUser) {
+    if (this.channelMembers[this.activeChannel]) {
+      return this.channelMembers[this.activeChannel]
+    }
+
     return [
       {
         id: 'me',
         name: currentUser.shownName,
         username: currentUser.username,
         status: currentUser.status
-      },
-      { id: 'alex', name: 'Alex', username: 'alex', status: 'online' },
-      { id: 'mariya', name: 'Mariya', username: 'mariya', status: 'away' }
+      }
     ]
+  },
+
+  async loadMembers(channelId = this.activeChannel) {
+    if (!channelId) return []
+    const members = await channelsApi.members(channelId)
+    this.channelMembers[channelId] = members.map(member => ({
+      id: String(member.id),
+      name: member.displayName,
+      username: member.username,
+      status: member.status.toLowerCase(),
+      role: member.role
+    }))
+    return this.channelMembers[channelId]
   },
 
   openMembersDialog() {

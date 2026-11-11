@@ -19,6 +19,10 @@ export const channelsApi = {
     })
   },
 
+  members(channelId) {
+    return request(`/channels/${channelId}/members`)
+  },
+
   leave(channelId) {
     return request(`/channels/${channelId}/leave`, { method: 'POST' })
   },
