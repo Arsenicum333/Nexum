@@ -4,7 +4,7 @@ import {
   createChannelValidator,
   createMessageValidator,
   inviteChannelMemberValidator,
-  joinChannelValidator
+  joinChannelValidator,
 } from '#validators/channel'
 
 const CHANNEL_LIFETIME_DAYS = 30
@@ -17,11 +17,7 @@ export default class ChannelsController {
     const channelId = this.getChannelId(params.id, response)
     if (!channelId) return
 
-    const channel = await db
-      .from('channels')
-      .where('id', channelId)
-      .whereNull('deleted_at')
-      .first()
+    const channel = await db.from('channels').where('id', channelId).whereNull('deleted_at').first()
     if (!channel) return response.notFound({ message: 'Channel not found' })
 
     const membership = await db
@@ -32,7 +28,7 @@ export default class ChannelsController {
       .first()
     if (!membership) {
       return response.forbidden({
-        message: 'You are not a member of this channel'
+        message: 'You are not a member of this channel',
       })
     }
 
@@ -58,10 +54,7 @@ export default class ChannelsController {
   async index({ auth, request, response, serialize }: HttpContext) {
     const user = auth.getUserOrFail()
     const userId = String(user.id)
-    const workspaceId = this.getWorkspaceId(
-      request.input('workspaceId'),
-      response
-    )
+    const workspaceId = this.getWorkspaceId(request.input('workspaceId'), response)
     if (!workspaceId) return
     await this.requireWorkspaceMember(workspaceId, userId, response)
     await this.removeExpiredChannels()
@@ -107,7 +100,7 @@ export default class ChannelsController {
         channels.set(id, {
           ...this.serializeChannel(channel, userId),
           invited: true,
-          invitationId: String(channel.invitation_id)
+          invitationId: String(channel.invitation_id),
         })
       }
     }
@@ -118,25 +111,19 @@ export default class ChannelsController {
   async store({ auth, request, response, serialize }: HttpContext) {
     const user = auth.getUserOrFail()
     const userId = String(user.id)
-    const { name, type, workspaceId } = await request.validateUsing(
-      createChannelValidator
-    )
+    const { name, type, workspaceId } = await request.validateUsing(createChannelValidator)
     await this.requireWorkspaceMember(String(workspaceId), userId, response)
     await this.removeExpiredChannels()
 
-    const existing = await db
-      .from('channels')
-      .where('name', name)
-      .whereNull('deleted_at')
-      .first()
+    const existing = await db.from('channels').where('name', name).whereNull('deleted_at').first()
     if (existing) {
       return response.conflict({
-        message: 'A channel with this name already exists'
+        message: 'A channel with this name already exists',
       })
     }
 
     try {
-      const channel = await db.transaction(async trx => {
+      const channel = await db.transaction(async (trx) => {
         const [createdChannel] = await trx
           .insertQuery()
           .table('channels')
@@ -145,7 +132,7 @@ export default class ChannelsController {
             channel_type: type,
             workspace_id: String(workspaceId),
             owner_id: userId,
-            last_activity_at: new Date()
+            last_activity_at: new Date(),
           })
           .returning(['id', 'name', 'channel_type', 'owner_id', 'workspace_id'])
 
@@ -154,19 +141,17 @@ export default class ChannelsController {
           user_id: userId,
           role: 'OWNER',
           membership_status: 'ACTIVE',
-          joined_at: new Date()
+          joined_at: new Date(),
         })
 
         return createdChannel
       })
 
-      return response.created(
-        await serialize(this.serializeChannel(channel, userId))
-      )
+      return response.created(await serialize(this.serializeChannel(channel, userId)))
     } catch (error) {
       if (this.isUniqueViolation(error)) {
         return response.conflict({
-          message: 'A channel with this name already exists'
+          message: 'A channel with this name already exists',
         })
       }
       throw error
@@ -176,8 +161,7 @@ export default class ChannelsController {
   async joinPublic({ auth, request, response, serialize }: HttpContext) {
     const user = auth.getUserOrFail()
     const userId = String(user.id)
-    const { name, type, workspaceId } =
-      await request.validateUsing(joinChannelValidator)
+    const { name, type, workspaceId } = await request.validateUsing(joinChannelValidator)
     await this.requireWorkspaceMember(String(workspaceId), userId, response)
 
     await this.removeExpiredChannels()
@@ -189,7 +173,7 @@ export default class ChannelsController {
       .first()
     if (!channel) {
       try {
-        const [createdChannel] = await db.transaction(async trx => {
+        const [createdChannel] = await db.transaction(async (trx) => {
           const [created] = await trx
             .insertQuery()
             .table('channels')
@@ -198,22 +182,16 @@ export default class ChannelsController {
               channel_type: type || 'PUBLIC',
               workspace_id: String(workspaceId),
               owner_id: userId,
-              last_activity_at: new Date()
+              last_activity_at: new Date(),
             })
-            .returning([
-              'id',
-              'name',
-              'channel_type',
-              'owner_id',
-              'workspace_id'
-            ])
+            .returning(['id', 'name', 'channel_type', 'owner_id', 'workspace_id'])
 
           await trx.insertQuery().table('channel_members').insert({
             channel_id: created.id,
             user_id: userId,
             role: 'OWNER',
             membership_status: 'ACTIVE',
-            joined_at: new Date()
+            joined_at: new Date(),
           })
           return [created]
         })
@@ -221,13 +199,13 @@ export default class ChannelsController {
         return response.created(
           await serialize({
             ...this.serializeChannel(createdChannel, userId),
-            created: true
+            created: true,
           })
         )
       } catch (error) {
         if (this.isUniqueViolation(error)) {
           return response.conflict({
-            message: 'A channel with this name already exists'
+            message: 'A channel with this name already exists',
           })
         }
         throw error
@@ -247,12 +225,12 @@ export default class ChannelsController {
       .first()
     if (activeBan) {
       return response.forbidden({
-        message: 'You were permanently removed from this channel'
+        message: 'You were permanently removed from this channel',
       })
     }
     if (membership?.membership_status === 'KICKED') {
       return response.forbidden({
-        message: 'You were removed from this channel'
+        message: 'You were removed from this channel',
       })
     }
     if (membership?.membership_status === 'ACTIVE') {
@@ -260,7 +238,7 @@ export default class ChannelsController {
     }
     if (channel.channel_type === 'PRIVATE') {
       return response.forbidden({
-        message: 'You need an invitation to join this private channel'
+        message: 'You need an invitation to join this private channel',
       })
     }
 
@@ -269,7 +247,7 @@ export default class ChannelsController {
         membership_status: 'ACTIVE',
         role: 'MEMBER',
         joined_at: new Date(),
-        left_at: null
+        left_at: null,
       })
     } else {
       await db.insertQuery().table('channel_members').insert({
@@ -277,7 +255,7 @@ export default class ChannelsController {
         user_id: userId,
         role: 'MEMBER',
         membership_status: 'ACTIVE',
-        joined_at: new Date()
+        joined_at: new Date(),
       })
     }
 
@@ -296,19 +274,15 @@ export default class ChannelsController {
     if (!channelId) return
 
     await this.removeExpiredChannels()
-    const channel = await db
-      .from('channels')
-      .where('id', channelId)
-      .whereNull('deleted_at')
-      .first()
+    const channel = await db.from('channels').where('id', channelId).whereNull('deleted_at').first()
     if (!channel) return response.notFound({ message: 'Channel not found' })
     if (String(channel.owner_id) === userId) {
       return response.forbidden({
-        message: 'The channel owner cannot leave; use /quit to close it'
+        message: 'The channel owner cannot leave; use /quit to close it',
       })
     }
 
-    const updated = await db.transaction(async trx => {
+    const updated = await db.transaction(async (trx) => {
       const membershipUpdated = await trx
         .from('channel_members')
         .where('channel_id', channelId)
@@ -329,7 +303,7 @@ export default class ChannelsController {
 
     if (!updated) {
       return response.forbidden({
-        message: 'You are not a member of this channel'
+        message: 'You are not a member of this channel',
       })
     }
 
@@ -343,22 +317,15 @@ export default class ChannelsController {
     if (!channelId) return
 
     await this.removeExpiredChannels()
-    const channel = await db
-      .from('channels')
-      .where('id', channelId)
-      .whereNull('deleted_at')
-      .first()
+    const channel = await db.from('channels').where('id', channelId).whereNull('deleted_at').first()
     if (!channel) return response.notFound({ message: 'Channel not found' })
     if (String(channel.owner_id) !== userId) {
       return response.forbidden({
-        message: 'Only the channel creator can delete it'
+        message: 'Only the channel creator can delete it',
       })
     }
 
-    await db
-      .from('channels')
-      .where('id', channelId)
-      .update({ deleted_at: new Date() })
+    await db.from('channels').where('id', channelId).update({ deleted_at: new Date() })
     return serialize({ message: 'Channel deleted' })
   }
 
@@ -367,16 +334,10 @@ export default class ChannelsController {
     const userId = String(user.id)
     const channelId = this.getChannelId(params.id, response)
     if (!channelId) return
-    const { username } = await request.validateUsing(
-      inviteChannelMemberValidator
-    )
+    const { username } = await request.validateUsing(inviteChannelMemberValidator)
 
     await this.removeExpiredChannels()
-    const channel = await db
-      .from('channels')
-      .where('id', channelId)
-      .whereNull('deleted_at')
-      .first()
+    const channel = await db.from('channels').where('id', channelId).whereNull('deleted_at').first()
     if (!channel) return response.notFound({ message: 'Channel not found' })
 
     const membership = await db
@@ -387,14 +348,13 @@ export default class ChannelsController {
       .first()
     if (!membership) {
       return response.forbidden({
-        message: 'Only channel members can invite users'
+        message: 'Only channel members can invite users',
       })
     }
-    const isOwner =
-      String(channel.owner_id) === userId || membership.role === 'OWNER'
+    const isOwner = String(channel.owner_id) === userId || membership.role === 'OWNER'
     if (channel.channel_type === 'PRIVATE' && !isOwner) {
       return response.forbidden({
-        message: 'Only the channel owner can invite users to a private channel'
+        message: 'Only the channel owner can invite users to a private channel',
       })
     }
 
@@ -405,7 +365,7 @@ export default class ChannelsController {
     if (!invitee) return response.notFound({ message: 'User not found' })
     if (String(invitee.id) === userId) {
       return response.unprocessableEntity({
-        message: 'You cannot invite yourself'
+        message: 'You cannot invite yourself',
       })
     }
 
@@ -416,7 +376,7 @@ export default class ChannelsController {
       .first()
     if (existingMembership?.membership_status === 'ACTIVE') {
       return response.conflict({
-        message: 'This user is already a channel member'
+        message: 'This user is already a channel member',
       })
     }
     const activeBan = await db
@@ -428,25 +388,19 @@ export default class ChannelsController {
     if (activeBan || existingMembership?.membership_status === 'KICKED') {
       if (!activeBan || !isOwner) {
         return response.forbidden({
-          message: 'Only the channel owner can restore this user'
+          message: 'Only the channel owner can restore this user',
         })
       }
 
-      await db.transaction(async trx => {
-        await trx
-          .from('channel_bans')
-          .where('id', activeBan.id)
-          .update({ revoked_at: new Date() })
+      await db.transaction(async (trx) => {
+        await trx.from('channel_bans').where('id', activeBan.id).update({ revoked_at: new Date() })
         if (existingMembership) {
-          await trx
-            .from('channel_members')
-            .where('id', existingMembership.id)
-            .update({
-              membership_status: 'ACTIVE',
-              role: 'MEMBER',
-              joined_at: new Date(),
-              left_at: null
-            })
+          await trx.from('channel_members').where('id', existingMembership.id).update({
+            membership_status: 'ACTIVE',
+            role: 'MEMBER',
+            joined_at: new Date(),
+            left_at: null,
+          })
         } else {
           await trx
             .insertQuery()
@@ -456,7 +410,7 @@ export default class ChannelsController {
               user_id: String(invitee.id),
               role: 'MEMBER',
               membership_status: 'ACTIVE',
-              joined_at: new Date()
+              joined_at: new Date(),
             })
         }
         await trx
@@ -475,7 +429,7 @@ export default class ChannelsController {
       return serialize({
         message: `Access restored for @${invitee.username}`,
         username: invitee.username,
-        restored: true
+        restored: true,
       })
     }
 
@@ -487,7 +441,7 @@ export default class ChannelsController {
       .first()
     if (pendingInvitation) {
       return response.conflict({
-        message: 'This user already has a pending invitation'
+        message: 'This user already has a pending invitation',
       })
     }
 
@@ -498,14 +452,14 @@ export default class ChannelsController {
         channel_id: channelId,
         inviter_id: userId,
         invitee_id: String(invitee.id),
-        status: 'PENDING'
+        status: 'PENDING',
       })
       .returning(['id'])
 
     return response.created(
       await serialize({
         invitationId: String(invitation.id),
-        username: invitee.username
+        username: invitee.username,
       })
     )
   }
@@ -515,34 +469,22 @@ export default class ChannelsController {
     const userId = String(user.id)
     const channelId = this.getChannelId(params.id, response)
     if (!channelId) return
-    const { username } = await request.validateUsing(
-      inviteChannelMemberValidator
-    )
+    const { username } = await request.validateUsing(inviteChannelMemberValidator)
 
     await this.removeExpiredChannels()
-    const channel = await db
-      .from('channels')
-      .where('id', channelId)
-      .whereNull('deleted_at')
-      .first()
+    const channel = await db.from('channels').where('id', channelId).whereNull('deleted_at').first()
     if (!channel) return response.notFound({ message: 'Channel not found' })
-    if (
-      channel.channel_type !== 'PRIVATE' ||
-      String(channel.owner_id) !== userId
-    ) {
+    if (channel.channel_type !== 'PRIVATE' || String(channel.owner_id) !== userId) {
       return response.forbidden({
-        message: 'Only the owner can revoke access to a private channel'
+        message: 'Only the owner can revoke access to a private channel',
       })
     }
 
-    const target = await db
-      .from('users')
-      .whereRaw('LOWER(username) = LOWER(?)', [username])
-      .first()
+    const target = await db.from('users').whereRaw('LOWER(username) = LOWER(?)', [username]).first()
     if (!target) return response.notFound({ message: 'User not found' })
     if (String(target.id) === userId) {
       return response.unprocessableEntity({
-        message: 'The channel owner cannot revoke their own access'
+        message: 'The channel owner cannot revoke their own access',
       })
     }
 
@@ -560,11 +502,11 @@ export default class ChannelsController {
       .first()
     if (!membership && !pendingInvitation) {
       return response.notFound({
-        message: 'User is not a member and has no pending invitation'
+        message: 'User is not a member and has no pending invitation',
       })
     }
 
-    await db.transaction(async trx => {
+    await db.transaction(async (trx) => {
       if (membership) {
         await trx
           .from('channel_members')
@@ -592,16 +534,10 @@ export default class ChannelsController {
     const userId = String(user.id)
     const channelId = this.getChannelId(params.id, response)
     if (!channelId) return
-    const { username } = await request.validateUsing(
-      inviteChannelMemberValidator
-    )
+    const { username } = await request.validateUsing(inviteChannelMemberValidator)
 
     await this.removeExpiredChannels()
-    const channel = await db
-      .from('channels')
-      .where('id', channelId)
-      .whereNull('deleted_at')
-      .first()
+    const channel = await db.from('channels').where('id', channelId).whereNull('deleted_at').first()
     if (!channel) return response.notFound({ message: 'Channel not found' })
 
     const actorMembership = await db
@@ -612,23 +548,20 @@ export default class ChannelsController {
       .first()
     if (!actorMembership) {
       return response.forbidden({
-        message: 'Only channel members can kick users'
+        message: 'Only channel members can kick users',
       })
     }
 
-    const target = await db
-      .from('users')
-      .whereRaw('LOWER(username) = LOWER(?)', [username])
-      .first()
+    const target = await db.from('users').whereRaw('LOWER(username) = LOWER(?)', [username]).first()
     if (!target) return response.notFound({ message: 'User not found' })
     if (String(target.id) === userId) {
       return response.unprocessableEntity({
-        message: 'You cannot kick yourself'
+        message: 'You cannot kick yourself',
       })
     }
     if (String(target.id) === String(channel.owner_id)) {
       return response.forbidden({
-        message: 'The channel owner cannot be kicked'
+        message: 'The channel owner cannot be kicked',
       })
     }
 
@@ -640,20 +573,19 @@ export default class ChannelsController {
       .first()
     if (!targetMembership) {
       return response.notFound({
-        message: 'The user is not an active channel member'
+        message: 'The user is not an active channel member',
       })
     }
 
-    const isOwner =
-      String(channel.owner_id) === userId || actorMembership.role === 'OWNER'
+    const isOwner = String(channel.owner_id) === userId || actorMembership.role === 'OWNER'
     if (!isOwner && channel.channel_type !== 'PUBLIC') {
       return response.forbidden({
-        message: 'Only the channel owner can kick users from a private channel'
+        message: 'Only the channel owner can kick users from a private channel',
       })
     }
 
     const now = new Date()
-    const outcome = await db.transaction(async trx => {
+    const outcome = await db.transaction(async (trx) => {
       await trx.from('channels').where('id', channelId).forUpdate().first()
 
       if (!isOwner) {
@@ -672,15 +604,11 @@ export default class ChannelsController {
           .insert({
             channel_id: channelId,
             target_user_id: String(target.id),
-            voter_user_id: userId
+            voter_user_id: userId,
           })
         const votes = await trx
           .from('kick_votes')
-          .join(
-            'channel_members',
-            'channel_members.user_id',
-            'kick_votes.voter_user_id'
-          )
+          .join('channel_members', 'channel_members.user_id', 'kick_votes.voter_user_id')
           .where('kick_votes.channel_id', channelId)
           .where('kick_votes.target_user_id', String(target.id))
           .where('channel_members.channel_id', channelId)
@@ -702,7 +630,7 @@ export default class ChannelsController {
       if (activeBan) {
         await trx.from('channel_bans').where('id', activeBan.id).update({
           reason: 'Kicked from channel',
-          created_by: userId
+          created_by: userId,
         })
       } else {
         await trx
@@ -712,7 +640,7 @@ export default class ChannelsController {
             channel_id: channelId,
             user_id: String(target.id),
             reason: 'Kicked from channel',
-            created_by: userId
+            created_by: userId,
           })
       }
       await trx
@@ -741,7 +669,7 @@ export default class ChannelsController {
 
     if ('alreadyVoted' in outcome && outcome.alreadyVoted) {
       return response.conflict({
-        message: `You have already voted to kick @${target.username}`
+        message: `You have already voted to kick @${target.username}`,
       })
     }
 
@@ -749,14 +677,14 @@ export default class ChannelsController {
       return serialize({
         message: `@${target.username} was permanently removed from the channel`,
         votes: outcome.voteCount,
-        banned: true
+        banned: true,
       })
     }
     return serialize({
       message: `Kick vote recorded for @${target.username}`,
       votes: outcome.voteCount,
       requiredVotes: KICK_VOTES_REQUIRED,
-      banned: false
+      banned: false,
     })
   }
 
@@ -767,11 +695,7 @@ export default class ChannelsController {
     if (!channelId) return
 
     await this.removeExpiredChannels()
-    const channel = await db
-      .from('channels')
-      .where('id', channelId)
-      .whereNull('deleted_at')
-      .first()
+    const channel = await db.from('channels').where('id', channelId).whereNull('deleted_at').first()
     if (!channel) return response.notFound({ message: 'Channel not found' })
 
     const invitation = await db
@@ -782,7 +706,7 @@ export default class ChannelsController {
       .first()
     if (!invitation) {
       return response.notFound({
-        message: 'Pending channel invitation not found'
+        message: 'Pending channel invitation not found',
       })
     }
 
@@ -794,7 +718,7 @@ export default class ChannelsController {
       .first()
     if (activeBan) {
       return response.forbidden({
-        message: 'The channel owner must restore your access first'
+        message: 'The channel owner must restore your access first',
       })
     }
 
@@ -805,17 +729,17 @@ export default class ChannelsController {
       .first()
     if (membership?.membership_status === 'KICKED') {
       return response.forbidden({
-        message: 'You were removed from this channel'
+        message: 'You were removed from this channel',
       })
     }
 
-    await db.transaction(async trx => {
+    await db.transaction(async (trx) => {
       if (membership && membership.membership_status !== 'ACTIVE') {
         await trx.from('channel_members').where('id', membership.id).update({
           membership_status: 'ACTIVE',
           role: 'MEMBER',
           joined_at: new Date(),
-          left_at: null
+          left_at: null,
         })
       } else if (!membership) {
         await trx.insertQuery().table('channel_members').insert({
@@ -823,7 +747,7 @@ export default class ChannelsController {
           user_id: userId,
           role: 'MEMBER',
           membership_status: 'ACTIVE',
-          joined_at: new Date()
+          joined_at: new Date(),
         })
       }
 
@@ -851,7 +775,7 @@ export default class ChannelsController {
 
     if (!updated) {
       return response.notFound({
-        message: 'Pending channel invitation not found'
+        message: 'Pending channel invitation not found',
       })
     }
     return serialize({ message: 'Invitation declined' })
@@ -864,11 +788,7 @@ export default class ChannelsController {
     if (!channelId) return
 
     await this.removeExpiredChannels()
-    const channel = await db
-      .from('channels')
-      .where('id', channelId)
-      .whereNull('deleted_at')
-      .first()
+    const channel = await db.from('channels').where('id', channelId).whereNull('deleted_at').first()
     if (!channel) return response.notFound({ message: 'Channel not found' })
 
     const membership = await db
@@ -879,7 +799,7 @@ export default class ChannelsController {
       .first()
     if (!membership) {
       return response.forbidden({
-        message: 'You are not a member of this channel'
+        message: 'You are not a member of this channel',
       })
     }
 
@@ -899,24 +819,17 @@ export default class ChannelsController {
       )
 
     return serialize(
-      messages.reverse().map(message => ({
+      messages.reverse().map((message) => ({
         id: String(message.id),
         text: message.content,
         time: new Date(message.created_at).toISOString(),
-        author:
-          String(message.author_id) === userId ? 'me' : message.display_name,
-        authorId: String(message.author_id)
+        author: String(message.author_id) === userId ? 'me' : message.display_name,
+        authorId: String(message.author_id),
       }))
     )
   }
 
-  async sendMessage({
-    auth,
-    params,
-    request,
-    response,
-    serialize
-  }: HttpContext) {
+  async sendMessage({ auth, params, request, response, serialize }: HttpContext) {
     const user = auth.getUserOrFail()
     const userId = String(user.id)
     const channelId = this.getChannelId(params.id, response)
@@ -924,11 +837,7 @@ export default class ChannelsController {
     const { content } = await request.validateUsing(createMessageValidator)
 
     await this.removeExpiredChannels()
-    const channel = await db
-      .from('channels')
-      .where('id', channelId)
-      .whereNull('deleted_at')
-      .first()
+    const channel = await db.from('channels').where('id', channelId).whereNull('deleted_at').first()
     if (!channel) return response.notFound({ message: 'Channel not found' })
 
     const membership = await db
@@ -939,12 +848,12 @@ export default class ChannelsController {
       .first()
     if (!membership) {
       return response.forbidden({
-        message: 'You are not a member of this channel'
+        message: 'You are not a member of this channel',
       })
     }
 
     const now = new Date()
-    const [message] = await db.transaction(async trx => {
+    const [message] = await db.transaction(async (trx) => {
       const [createdMessage] = await trx
         .insertQuery()
         .table('messages')
@@ -953,34 +862,26 @@ export default class ChannelsController {
 
       const usernames = [
         ...new Set(
-          [...content.matchAll(/@([a-zA-Z0-9_]+)/g)].map(([, username]) =>
-            username.toLowerCase()
-          )
-        )
+          [...content.matchAll(/@([a-zA-Z0-9_]+)/g)].map(([, username]) => username.toLowerCase())
+        ),
       ]
       if (usernames.length) {
-        const mentionedUsers = await trx
-          .from('users')
-          .whereIn('username', usernames)
-          .select('id')
+        const mentionedUsers = await trx.from('users').whereIn('username', usernames).select('id')
 
         if (mentionedUsers.length) {
           await trx
             .insertQuery()
             .table('message_mentions')
             .insert(
-              mentionedUsers.map(mentionedUser => ({
+              mentionedUsers.map((mentionedUser) => ({
                 message_id: createdMessage.id,
-                mentioned_user_id: mentionedUser.id
+                mentioned_user_id: mentionedUser.id,
               }))
             )
         }
       }
 
-      await trx
-        .from('channels')
-        .where('id', channelId)
-        .update({ last_activity_at: now })
+      await trx.from('channels').where('id', channelId).update({ last_activity_at: now })
 
       return [createdMessage]
     })
@@ -991,7 +892,7 @@ export default class ChannelsController {
         text: message.content,
         time: new Date(message.created_at).toISOString(),
         author: user.displayName,
-        authorId: userId
+        authorId: userId,
       })
     )
   }
@@ -1010,13 +911,10 @@ export default class ChannelsController {
       id: String(channel.id),
       name: channel.name,
       private: channel.channel_type === 'PRIVATE',
-      owner:
-        String(channel.owner_id) === String(userId)
-          ? 'me'
-          : String(channel.owner_id),
       ownerId: String(channel.owner_id),
+      isOwner: String(channel.owner_id) === String(userId),
       workspaceId: channel.workspace_id ? String(channel.workspace_id) : null,
-      invited: false
+      invited: false,
     }
   }
 
@@ -1058,9 +956,7 @@ export default class ChannelsController {
   }
 
   private async removeExpiredChannels() {
-    const expiresBefore = new Date(
-      Date.now() - CHANNEL_LIFETIME_DAYS * 24 * 60 * 60 * 1000
-    )
+    const expiresBefore = new Date(Date.now() - CHANNEL_LIFETIME_DAYS * 24 * 60 * 60 * 1000)
     await db
       .from('channels')
       .whereNull('deleted_at')

@@ -269,7 +269,7 @@ async function runCommand(value) {
       return true
     }
 
-    const isOwner = currentChannel.value.owner === 'me'
+    const isOwner = currentChannel.value.isOwner === true
     const nextChannel = isOwner
       ? await chatStore.deleteActiveChannel()
       : await chatStore.leaveActiveChannel()

@@ -145,7 +145,7 @@
                   :disable="
                     !currentChannel ||
                     currentChannel.invited ||
-                    currentChannel.owner === 'me'
+                    currentChannel.isOwner
                   "
                   @click="leaveChannel"
                 >
@@ -153,7 +153,7 @@
                     ><q-icon name="logout"
                   /></q-item-section>
                   <q-item-section>{{
-                    currentChannel?.owner === 'me'
+                    currentChannel?.isOwner
                       ? 'Close channel with /quit'
                       : 'Leave channel'
                   }}</q-item-section>
@@ -162,7 +162,7 @@
                 <q-item
                   clickable
                   v-close-popup
-                  :disable="!currentChannel || currentChannel.owner !== 'me'"
+                  :disable="!currentChannel || !currentChannel.isOwner"
                   @click="deleteChannel"
                 >
                   <q-item-section avatar
@@ -337,9 +337,7 @@
             </q-item-section>
             <q-item-section side>
               <q-badge
-                v-if="
-                  member.role === 'OWNER' || member.id === currentChannel?.owner
-                "
+                v-if="member.role === 'OWNER' || member.id === currentChannel?.ownerId"
                 color="primary"
                 label="owner"
               />
