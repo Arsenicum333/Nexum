@@ -120,29 +120,46 @@ async function submitCommand() {
   const value = command.value.trim()
   if (!value) return
 
-  if (value.startsWith('/')) {
-    const commandHandled = await runCommand(value)
-    if (!commandHandled && route.path.startsWith('/chat/')) {
-      await sendMessage(value)
+  let submitted = true
+  try {
+    if (value.startsWith('/')) {
+      const commandHandled = await runCommand(value)
+      if (!commandHandled && route.path.startsWith('/chat/')) {
+        submitted = await sendMessage(value)
+      } else if (!commandHandled) {
+        $q.notify({
+          type: 'info',
+          message: 'Open a channel to send a message'
+        })
+        submitted = false
+      }
+    } else if (route.path.startsWith('/chat/')) {
+      submitted = await sendMessage(value)
+    } else {
+      $q.notify({
+        type: 'info',
+        message: 'Open a channel to send a message'
+      })
+      submitted = false
     }
-  } else if (route.path.startsWith('/chat/')) {
-    await sendMessage(value)
-  } else {
-    $q.notify({
-      type: 'info',
-      message: 'Open a channel to send a message'
-    })
+  } catch (error) {
+    $q.notify({ type: 'negative', message: error.message })
+    submitted = false
   }
 
-  command.value = ''
-  commandInput.value?.focus()
+  if (submitted) {
+    command.value = ''
+    commandInput.value?.focus()
+  }
 }
 
 async function sendMessage(value) {
   try {
     await chatStore.addMessage(value)
+    return true
   } catch (error) {
     $q.notify({ type: 'negative', message: error.message })
+    return false
   }
 }
 
@@ -153,20 +170,31 @@ async function runCommand(value) {
   if (commandName === 'help') {
     $q.notify({
       type: 'info',
-      message: '/join, /invite, /revoke, /kick, /list, /cancel, /quit'
+      message:
+        '/join channelName [private], /invite nickName, /revoke nickName, /kick nickName, /quit'
     })
     return true
   }
 
   if (commandName === 'join' && args[0]) {
     const channelName = args[0].toLowerCase()
-    try {
-      const channel = await chatStore.joinChannel(channelName)
-      await router.push(`/chat/${channel.name}`)
-      $q.notify({ type: 'positive', message: `Joined #${channelName}` })
-    } catch (error) {
-      $q.notify({ type: 'negative', message: error.message })
+    const isPrivate = args[1]?.toLowerCase() === 'private'
+    if (args.length > 2 || (args[1] && !isPrivate)) {
+      $q.notify({ type: 'info', message: 'Usage: /join channelName [private]' })
+      return true
     }
+    const channel = await chatStore.joinChannel(channelName, isPrivate)
+    await router.push(`/chat/${channel.name}`)
+    $q.notify({
+      type: 'positive',
+      message: channel.created
+        ? `Created ${isPrivate ? 'private ' : ''}channel #${channelName}`
+        : `Joined #${channelName}`
+    })
+    return true
+  }
+  if (commandName === 'join') {
+    $q.notify({ type: 'info', message: 'Usage: /join channelName [private]' })
     return true
   }
 
@@ -182,28 +210,55 @@ async function runCommand(value) {
 
   if (commandName === 'invite') {
     const username = (args[0] || '').replace(/^@/, '')
-    if (!username) {
-      $q.notify({ type: 'info', message: 'Usage: /invite username' })
+    if (!username || args.length > 1) {
+      $q.notify({ type: 'info', message: 'Usage: /invite nickName' })
       return true
     }
-    try {
-      await chatStore.inviteMember(username)
-      $q.notify({
-        type: 'positive',
-        message: `Invitation sent to @${username}`
-      })
-    } catch (error) {
-      $q.notify({ type: 'negative', message: error.message })
-    }
+    const result = await chatStore.inviteMember(username)
+    $q.notify({
+      type: 'positive',
+      message: result?.restored
+        ? `Access restored for @${username}`
+        : `Invitation sent to @${username}`
+    })
     return true
   }
 
-  const supportedCommands = ['revoke', 'kick', 'cancel', 'quit']
-  if (supportedCommands.includes(commandName)) {
+  if (commandName === 'revoke' || commandName === 'kick') {
+    const username = (args[0] || '').replace(/^@/, '')
+    if (!username || args.length > 1) {
+      $q.notify({
+        type: 'info',
+        message: `Usage: /${commandName} nickName`
+      })
+      return true
+    }
+    const result =
+      commandName === 'revoke'
+        ? await chatStore.revokeMember(username)
+        : await chatStore.kickMember(username)
     $q.notify({
-      type: 'info',
-      message: `Command /${commandName} is available in this prototype`
+      type: result?.banned === false ? 'info' : 'positive',
+      message: result?.message || `/${commandName} completed`
     })
+    return true
+  }
+
+  if (commandName === 'quit') {
+    if (args.length) {
+      $q.notify({ type: 'info', message: 'Usage: /quit' })
+      return true
+    }
+    const nextChannel = await chatStore.quitChannel()
+    await router.push(
+      nextChannel ? `/chat/${nextChannel.name}` : '/chat/general'
+    )
+    $q.notify({ type: 'positive', message: 'Channel closed' })
+    return true
+  }
+
+  if (commandName === 'cancel') {
+    $q.notify({ type: 'info', message: 'Use /quit to close your channel' })
     return true
   }
 

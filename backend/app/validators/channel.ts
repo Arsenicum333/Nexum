@@ -26,6 +26,7 @@ export const joinChannelValidator = vine.create({
     .minLength(1)
     .maxLength(40)
     .regex(/^[a-z0-9-]+$/),
+  type: vine.enum(['PUBLIC', 'PRIVATE']).optional(),
 })
 
 export const createMessageValidator = vine.create({

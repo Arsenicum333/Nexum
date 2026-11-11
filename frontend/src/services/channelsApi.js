@@ -12,10 +12,10 @@ export const channelsApi = {
     })
   },
 
-  join(name) {
+  join(name, type = 'PUBLIC') {
     return request('/channels/join', {
       method: 'POST',
-      body: JSON.stringify({ name })
+      body: JSON.stringify({ name, type })
     })
   },
 
@@ -29,6 +29,20 @@ export const channelsApi = {
 
   invite(channelId, username) {
     return request(`/channels/${channelId}/invitations`, {
+      method: 'POST',
+      body: JSON.stringify({ username })
+    })
+  },
+
+  revoke(channelId, username) {
+    return request(`/channels/${channelId}/revocations`, {
+      method: 'POST',
+      body: JSON.stringify({ username })
+    })
+  },
+
+  kick(channelId, username) {
+    return request(`/channels/${channelId}/kicks`, {
       method: 'POST',
       body: JSON.stringify({ username })
     })

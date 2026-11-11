@@ -42,6 +42,8 @@ router
         router.post('channels/:id/leave', [controllers.Channels, 'leave'])
         router.delete('channels/:id', [controllers.Channels, 'destroy'])
         router.post('channels/:id/invitations', [controllers.Channels, 'invite'])
+        router.post('channels/:id/revocations', [controllers.Channels, 'revoke'])
+        router.post('channels/:id/kicks', [controllers.Channels, 'kick'])
         router.post('channels/:id/invitations/accept', [controllers.Channels, 'acceptInvitation'])
         router.post('channels/:id/invitations/decline', [controllers.Channels, 'declineInvitation'])
         router.get('channels/:id/messages', [controllers.Channels, 'messages'])

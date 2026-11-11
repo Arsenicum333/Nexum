@@ -143,13 +143,21 @@
                 <q-item
                   clickable
                   v-close-popup
-                  :disable="!currentChannel || currentChannel.invited"
+                  :disable="
+                    !currentChannel ||
+                    currentChannel.invited ||
+                    currentChannel.owner === 'me'
+                  "
                   @click="leaveChannel"
                 >
                   <q-item-section avatar
                     ><q-icon name="logout"
                   /></q-item-section>
-                  <q-item-section>Leave channel</q-item-section>
+                  <q-item-section>{{
+                    currentChannel?.owner === 'me'
+                      ? 'Close channel with /quit'
+                      : 'Leave channel'
+                  }}</q-item-section>
                 </q-item>
                 <q-separator />
                 <q-item
@@ -346,7 +354,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, nextTick, onMounted } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useQuasar } from 'quasar'
 import { useRoute, useRouter } from 'vue-router'
 import { userStore } from '@/store/userStore'
@@ -366,6 +374,9 @@ const scrollArea = ref(null)
 const loadingMore = ref(false)
 const pageSize = 20
 const startIndexes = ref({})
+const CHANNEL_REFRESH_INTERVAL_MS = 15000
+let channelRefreshTimer
+let isRefreshingChannels = false
 
 const channelTypeOptions = [
   { label: 'Public channel - anyone can join', value: 'public' },
@@ -510,7 +521,38 @@ watch(
   { immediate: true }
 )
 
+async function refreshChannels() {
+  if (isRefreshingChannels || document.visibilityState === 'hidden') return
+  isRefreshingChannels = true
+  try {
+    await chatStore.loadChannels()
+    const activeChannel = chatStore.textChannels.find(
+      channel => channel.id === chatStore.activeChannel
+    )
+    const channelName = activeChannel?.name || 'general'
+    if (route.params.channelName !== channelName) {
+      await router.replace(`/chat/${channelName}`)
+    }
+  } catch (error) {
+    $q.notify({ type: 'negative', message: error.message })
+  } finally {
+    isRefreshingChannels = false
+  }
+}
+
+function refreshChannelsWhenVisible() {
+  if (document.visibilityState === 'visible') void refreshChannels()
+}
+
 onMounted(async () => {
+  channelRefreshTimer = window.setInterval(
+    refreshChannelsWhenVisible,
+    CHANNEL_REFRESH_INTERVAL_MS
+  )
+  window.addEventListener('focus', refreshChannelsWhenVisible)
+  document.addEventListener('visibilitychange', refreshChannelsWhenVisible)
+
+  isRefreshingChannels = true
   try {
     await chatStore.loadChannels()
     syncChannelFromRoute(route.params.channelName)
@@ -522,8 +564,16 @@ onMounted(async () => {
     }
   } catch (error) {
     $q.notify({ type: 'negative', message: error.message })
+  } finally {
+    isRefreshingChannels = false
   }
   scrollToBottom()
+})
+
+onUnmounted(() => {
+  window.clearInterval(channelRefreshTimer)
+  window.removeEventListener('focus', refreshChannelsWhenVisible)
+  document.removeEventListener('visibilitychange', refreshChannelsWhenVisible)
 })
 
 function authorName(msg) {

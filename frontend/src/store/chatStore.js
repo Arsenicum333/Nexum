@@ -50,14 +50,18 @@ export const chatStore = reactive({
   },
 
   async addMessage(text) {
-    const messages = this.channelMessages[this.activeChannel]
-    if (!messages || !text.trim()) return
+    const channelId = this.activeChannel
+    const channel = this.textChannels.find(item => item.id === channelId)
+    if (!channel || channel.invited) {
+      throw new Error('Join a channel before sending a message')
+    }
 
-    const message = await channelsApi.sendMessage(
-      this.activeChannel,
-      text.trim()
-    )
-    messages.push({
+    const content = text.trim()
+    if (!content) return
+
+    const message = await channelsApi.sendMessage(channelId, content)
+    if (!this.channelMessages[channelId]) this.channelMessages[channelId] = []
+    this.channelMessages[channelId].push({
       ...message,
       time: new Date(message.time).toLocaleTimeString([], {
         hour: '2-digit',
@@ -95,8 +99,11 @@ export const chatStore = reactive({
     return channel
   },
 
-  async joinChannel(name) {
-    const channel = await channelsApi.join(name)
+  async joinChannel(name, isPrivate = false) {
+    const channel = await channelsApi.join(
+      name,
+      isPrivate ? 'PRIVATE' : 'PUBLIC'
+    )
     if (!this.textChannels.some(item => item.id === channel.id)) {
       this.textChannels.push(channel)
     }
@@ -154,7 +161,28 @@ export const chatStore = reactive({
     const channel = this.textChannels.find(
       item => item.id === this.activeChannel
     )
-    if (!channel) return
+    if (!channel) throw new Error('Open a channel first')
     return channelsApi.invite(channel.id, username)
+  },
+
+  async revokeMember(username) {
+    const channel = this.textChannels.find(
+      item => item.id === this.activeChannel
+    )
+    if (!channel) throw new Error('Open a channel first')
+    return channelsApi.revoke(channel.id, username)
+  },
+
+  async kickMember(username) {
+    const channel = this.textChannels.find(
+      item => item.id === this.activeChannel
+    )
+    if (!channel) throw new Error('Open a channel first')
+    return channelsApi.kick(channel.id, username)
+  },
+
+  async quitChannel() {
+    if (!this.activeChannel) throw new Error('Open a channel first')
+    return this.deleteActiveChannel()
   }
 })
